@@ -1,0 +1,23 @@
+# Dane (pobierane w notebooku, bywają duże)
+data/*.zip
+data/*.arff
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Node / Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+*.log
+.DS_Store
+
+# Środowiskowe
+.env
+.env.local

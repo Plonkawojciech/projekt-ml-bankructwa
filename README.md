@@ -1,9 +1,10 @@
-# 🏢💀 Bankrupt-AI — przewidywanie bankructwa polskich firm
+# 📈🇵🇱 GPW Liga Radar — predykcja awansów i spadków w indeksach giełdowych
 
 Projekt zaliczeniowy z przedmiotu **Uczenie maszynowe w Python — laboratorium** (CDV, grupa 4).
 
-> Model uczenia maszynowego, który na podstawie wskaźników finansowych firmy przewiduje,
-> czy grozi jej bankructwo — wraz z interaktywną stroną www i analizą kosztową dla banku/inwestora.
+> Model uczenia maszynowego, który na podstawie cech rynkowych spółki przewiduje, do której „ligi"
+> Giełdy Papierów Wartościowych należy (**WIG20 / mWIG40 / sWIG80**), i wskazuje kandydatów do
+> awansu lub spadku przy najbliższej kwartalnej rewizji indeksów — wraz z analizą wpływu na fundusze ETF.
 
 ---
 
@@ -15,59 +16,83 @@ Projekt zaliczeniowy z przedmiotu **Uczenie maszynowe w Python — laboratorium*
 
 ## 🎯 Koncepcja projektu
 
-Celem jest zbudowanie i porównanie kilku modeli klasyfikacyjnych, które na podstawie
-**64 wskaźników finansowych** przedsiębiorstwa (płynność, zadłużenie, rentowność, rotacja)
-przewidują, czy firma **zbankrutuje** w nadchodzącym okresie.
+Główne indeksy warszawskiej giełdy tworzą hierarchię według wielkości spółek:
 
-Projekt nie kończy się na samym modelu — powstaje też **interaktywna strona internetowa**,
-na której można wpisać dane firmy i otrzymać werdykt wraz z wyjaśnieniem (które wskaźniki
-najbardziej wpłynęły na decyzję) oraz **scenariuszem kosztowym** (ile traci instytucja
-finansowa na błędnej decyzji kredytowej).
+| Indeks | Spółki | Charakter |
+|---|---|---|
+| **WIG20** | 20 największych | blue chips (np. Orlen, KGHM, PKO, Allegro) |
+| **mWIG40** | 40 średnich | mid-cap |
+| **sWIG80** | 80 mniejszych | small-cap |
+
+Skład tych indeksów jest **rewidowany kwartalnie** — spółki awansują i spadają między ligami w zależności
+od rankingu opartego na **kapitalizacji free-float** i **wartości obrotów**. To realne, mierzalne kryteria,
+a więc problem nadaje się do modelowania.
+
+**Pomysł:** zbudować klasyfikator, który na podstawie cech rynkowych spółki przypisuje ją do właściwej ligi.
+Spółki, które model „widzi" w innej lidze niż obecna (lub leżą blisko granicy decyzyjnej), to **kandydaci do
+awansu lub spadku** przy następnej rewizji.
+
+### Wątek ETF
+
+Na GPW notowane są fundusze ETF replikujące te indeksy (m.in. **Beta ETF WIG20TR**, **Beta ETF mWIG40TR**).
+Gdy spółka wchodzi do indeksu, fundusz **musi** ją dokupić, a gdy wypada — sprzedać. Te wymuszone transakcje
+wpływają na kurs. Projekt pokazuje, które spółki są najbliżej takiej zmiany i jaki może mieć ona wpływ na ETF.
 
 ### Dane
 
-- **Źródło:** [Polish Companies Bankruptcy Data — UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/365/polish+companies+bankruptcy+data)
-- **Opis:** dane ~10 000 polskich firm zebrane przez Emerging Markets Information Service,
-  64 wskaźniki finansowe (Attr1–Attr64) + etykieta `class` (0 = firma przetrwała, 1 = bankructwo).
-- **Charakterystyka:** dane silnie **niezbalansowane** (bankrutów jest ~2–7%) oraz z **brakami danych** —
-  co czyni je realistycznym, „brudnym" zbiorem wymagającym czyszczenia i odpowiednich technik.
+W pełni automatyczny, reprodukowalny pipeline (bez ręcznie wpisywanych danych):
+
+1. **Skład indeksów** — pobierany z Wikipedii (`pandas.read_html`): nazwy spółek w każdej lidze.
+2. **Mapowanie na symbole giełdowe** — wyszukiwarka Yahoo Finance (nazwa → ticker `.WA`).
+3. **Dane rynkowe** — `yfinance`: historia notowań (ceny, wolumen), kapitalizacja, sektor.
+
+### Cechy (features)
+
+Wyliczane z danych rynkowych, zbieżne z oficjalnymi kryteriami rankingu indeksów:
+
+- **kapitalizacja** rynkowa,
+- **średni obrót** dzienny (cena × wolumen) — miara płynności,
+- **zmienność** (odchylenie standardowe stóp zwrotu),
+- **momentum** (stopa zwrotu za 3/6/12 miesięcy),
+- poziom ceny, sektor.
 
 ### Planowane modele
 
-| Model | Po co |
+| Model | Rola |
 |---|---|
-| **K-Nearest Neighbors (KNN)** | baza odniesienia, wymaga skalowania danych |
-| **Decision Tree** | interpretowalny, daje regułki decyzyjne |
-| **Random Forest** | mocniejszy zespół drzew, zwykle najlepszy wynik |
-| **Gradient Boosting / XGBoost** | model premium do porównania |
+| **K-Nearest Neighbors** | baza, wymaga skalowania |
+| **Decision Tree** | interpretowalny, reguły przypisania do ligi |
+| **Random Forest** | główny model, zespół drzew |
+| **Gradient Boosting** | model premium do porównania |
 
-Dodatkowo: porównanie **różnych konfiguracji** (np. liczba sąsiadów w KNN, głębokość drzewa),
-techniki radzenia sobie z niezbalansowaniem (**SMOTE / class_weight**) oraz **SHAP** do wyjaśniania decyzji.
+Dodatkowo: porównanie konfiguracji, analiza ważności cech, **SHAP** (dlaczego spółka trafia do danej ligi).
 
 ### Wizualizacje
 
-- rozkład bankrutów vs zdrowych firm, mapa ciepła korelacji wskaźników
-- porównanie skuteczności modeli (accuracy / precision / recall / F1)
-- macierz pomyłek, krzywa precision-recall
-- **interaktywna strona www** (Next.js + wykresy) — formularz „sprawdź firmę"
-- **scenariusz kosztowy** — koszt błędnych decyzji w zł
+- rozkłady cech w podziale na ligi, mapa ciepła korelacji,
+- porównanie skuteczności modeli (macierz pomyłek, metryki),
+- **ranking kandydatów do awansu/spadku** (spółki najbliżej granicy),
+- **interaktywna strona www** (Next.js + Vercel) z wątkiem ETF.
 
 ---
 
 ## 🗂️ Struktura repozytorium
 
 ```
-projekt-ml-bankructwa/
-├── notebook/   # Jupyter/Colab — cała część ML (dane → trening → wyniki)
-├── data/       # zbiór danych (pobierany w notebooku)
-├── model/      # wytrenowany model wyeksportowany do formatu ONNX
-├── web/        # strona Next.js (interaktywne demo, deploy na Vercel)
+.
+├── notebook/                    # część ML (Jupyter/Colab)
+│   ├── 01_dane.ipynb            # pobranie i przygotowanie danych GPW
+│   ├── 02_modele.ipynb          # trening i porównanie modeli (wkrótce)
+│   └── archiwum_bankructwa/     # poprzednia wersja tematu (archiwum)
+├── data/                        # zapisane dane (CSV)
+├── model/                       # model wyeksportowany do ONNX
+├── web/                         # strona Next.js (deploy na Vercel)
 └── README.md
 ```
 
 ## 🛠️ Stack technologiczny
 
-- **ML:** Python, pandas, scikit-learn, imbalanced-learn, SHAP, matplotlib/seaborn (Google Colab)
+- **ML:** Python, pandas, scikit-learn, yfinance, SHAP, matplotlib/seaborn (Google Colab)
 - **Web:** Next.js, TypeScript, onnxruntime-web (model w przeglądarce), wykresy
 - **Hosting:** Vercel | **Kod:** GitHub
 

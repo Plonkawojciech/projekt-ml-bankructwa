@@ -34,18 +34,6 @@ export default function Strona() {
 
   const prob = useMemo(() => (model ? prawdopodobienstwo(model, wartosci) : 0), [model, wartosci]);
 
-  const wklady = useMemo(() => {
-    if (!model) return [];
-    return model.cechy_glowne
-      .map((c) => {
-        const probMediana = prawdopodobienstwo(model, { ...wartosci, [c.key]: c.median });
-        return { label: c.label, key: c.key, efekt: prob - probMediana };
-      })
-      .filter((w) => Math.abs(w.efekt) > 0.002)
-      .sort((a, b) => Math.abs(b.efekt) - Math.abs(a.efekt))
-      .slice(0, 6);
-  }, [model, wartosci, prob]);
-
   if (!model) return <div className="loading">Ładowanie modelu…</div>;
 
   const ustaw = (key: string, v: number) => setWartosci((w) => ({ ...w, [key]: v }));
@@ -59,7 +47,6 @@ export default function Strona() {
       : { kolor: "var(--red)", txt: "Wysokie ryzyko" };
 
   const frac = Math.min(1, prob / 0.4);
-  const maxWklad = Math.max(0.001, ...wklady.map((w) => Math.abs(w.efekt)));
 
   const fnNum = Number(kosztFN) || 0;
   const fpNum = Number(kosztFP) || 0;
@@ -212,13 +199,47 @@ export default function Strona() {
             <h2>Wypróbuj model</h2>
           </div>
           <p className="sub">
-            Ustaw osiem najważniejszych wskaźników, a model (Gradient Boosting, liczony w przeglądarce) na
-            żywo oszacuje prawdopodobieństwo bankructwa. Gotowe profile pokazują kontrast między firmami.
+            Wybierz gotowy profil firmy albo dostosuj kilka wskaźników — model (Gradient Boosting, liczony
+            w przeglądarce) na żywo oszacuje prawdopodobieństwo bankructwa.
           </p>
 
-          <div className="predictor">
-            <div className="card sliders">
-              {model.cechy_glowne.map((c) => {
+          <div className="demo card">
+            <div className="gauge-wrap">
+              <svg className="gauge" viewBox="0 0 230 126" role="img" aria-label={`Ryzyko ${fmtPct(prob)}`}>
+                <path className="gauge-bg" d="M15 116 A100 100 0 0 1 215 116" pathLength={100} />
+                <path
+                  className="gauge-fill"
+                  d="M15 116 A100 100 0 0 1 215 116"
+                  pathLength={100}
+                  style={{ stroke: band.kolor, strokeDasharray: `${frac * 100} 100` }}
+                />
+              </svg>
+              <div className="gauge-center">
+                <div className="bigpct" style={{ color: band.kolor }}>
+                  {fmtPct(prob)}
+                </div>
+                <div className="tag" style={{ background: band.kolor, color: "#fff" }}>
+                  {band.txt}
+                </div>
+              </div>
+            </div>
+            <p className="baserate">prawdopodobieństwo bankructwa · bazowo w zbiorze ~5%</p>
+
+            <div className="presets">
+              <button className="btn" onClick={() => preset(model.presety.zdrowa)}>
+                Zdrowa firma
+              </button>
+              <button className="btn" onClick={() => preset(model.presety.bankrut)}>
+                Typowy bankrut
+              </button>
+              <button className="btn" onClick={() => preset(model.mediany_all)}>
+                Reset
+              </button>
+            </div>
+
+            <div className="tweak">
+              <h4>lub dostosuj wskaźniki ręcznie</h4>
+              {model.cechy_glowne.slice(0, 5).map((c) => {
                 const v = wartosci[c.key] ?? c.median;
                 const step = (c.p95 - c.p05) / 100 || 0.01;
                 return (
@@ -240,65 +261,6 @@ export default function Strona() {
                   </div>
                 );
               })}
-              <div className="presets">
-                <button className="btn" onClick={() => preset(model.presety.zdrowa)}>
-                  ↩ Typowa zdrowa firma
-                </button>
-                <button className="btn" onClick={() => preset(model.presety.bankrut)}>
-                  ⚠ Typowy bankrut
-                </button>
-                <button className="btn" onClick={() => preset(model.mediany_all)}>
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            <div className="card verdict">
-              <div className="gauge-wrap">
-                <svg className="gauge" viewBox="0 0 230 126" role="img" aria-label={`Ryzyko ${fmtPct(prob)}`}>
-                  <path className="gauge-bg" d="M15 116 A100 100 0 0 1 215 116" pathLength={100} />
-                  <path
-                    className="gauge-fill"
-                    d="M15 116 A100 100 0 0 1 215 116"
-                    pathLength={100}
-                    style={{ stroke: band.kolor, strokeDasharray: `${frac * 100} 100` }}
-                  />
-                </svg>
-                <div className="gauge-center">
-                  <div className="bigpct" style={{ color: band.kolor }}>
-                    {fmtPct(prob)}
-                  </div>
-                  <div className="tag" style={{ background: band.kolor, color: "#fff" }}>
-                    {band.txt}
-                  </div>
-                </div>
-              </div>
-              <p className="baserate">Bazowa częstość bankructw w zbiorze: ~5%</p>
-
-              <div className="contrib">
-                <h4>Co najbardziej wpływa na ten wynik</h4>
-                {wklady.length > 0 ? (
-                  wklady.map((w) => (
-                    <div className="crow" key={w.key}>
-                      <span className="cn">{w.label}</span>
-                      <div
-                        className="cbar"
-                        style={{
-                          width: `${(Math.abs(w.efekt) / maxWklad) * 70 + 8}px`,
-                          background: w.efekt > 0 ? "var(--red)" : "var(--green)",
-                        }}
-                      />
-                      <span style={{ color: w.efekt > 0 ? "var(--red)" : "var(--green)", fontWeight: 700 }}>
-                        {w.efekt > 0 ? "↑" : "↓"}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ fontSize: "12.5px", color: "var(--faint)", margin: 0 }}>
-                    Wszystkie wskaźniki są blisko typowych wartości — brak wyróżniających się czynników ryzyka.
-                  </p>
-                )}
-              </div>
             </div>
           </div>
         </div>

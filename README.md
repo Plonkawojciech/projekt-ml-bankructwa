@@ -58,28 +58,55 @@ techniki radzenia sobie z niezbalansowaniem (**SMOTE / class_weight**) oraz **SH
 
 ```
 .
-├── notebook/                       # cała część ML (Jupyter/Colab)
+├── notebook/                       # część ML (Jupyter/Colab)
 │   ├── 01_dane_i_eksploracja.ipynb # dane → opis → czyszczenie → wizualizacje
-│   ├── 02_modele.ipynb             # trening i porównanie modeli (wkrótce)
+│   ├── 02_modele.ipynb             # trening, ocena, SHAP, scenariusz kosztowy
 │   └── archiwum_gpw/               # porzucony wariant tematu (indeksy GPW)
-├── data/                           # zbiór danych (pobierany w notebooku)
-├── model/                          # wytrenowany model wyeksportowany do ONNX
+├── scripts/train_and_export.py     # silnik: trening + eksport modelu dla strony
+├── artefakty/                      # wykresy wyników + metryki (JSON)
 ├── web/                            # strona Next.js (deploy na Vercel)
 └── README.md
 ```
 
 ## 🛠️ Stack technologiczny
 
-- **ML:** Python, pandas, scikit-learn, imbalanced-learn, SHAP, matplotlib/seaborn (Google Colab)
-- **Web:** Next.js, TypeScript, onnxruntime-web (model w przeglądarce), wykresy
+- **ML:** Python, pandas, scikit-learn, SHAP, matplotlib/seaborn (Google Colab)
+- **Web:** Next.js, TypeScript — model (Gradient Boosting) liczony w przeglądarce w czystym JS
 - **Hosting:** Vercel | **Kod:** GitHub
 
 ---
 
 ## 📊 Wyniki
 
-_(uzupełnione po wytrenowaniu modeli)_
+Cztery modele wytrenowano na 80% danych (43 405 firm, 4,82% bankrutów) i przetestowano na 20%.
+Ze względu na niezbalansowanie kluczowe są metryki dla klasy „bankrut", a nie ogólna trafność.
+
+| Model | Trafność | Czułość | Precyzja | F1 | AUC |
+|---|---|---|---|---|---|
+| KNN | 0,952 | 0,002 | 0,500 | 0,005 | 0,722 |
+| Drzewo decyzyjne | 0,801 | 0,725 | 0,158 | 0,260 | 0,850 |
+| **Las losowy** ⭐ | **0,963** | 0,342 | **0,773** | **0,474** | **0,945** |
+| Gradient Boosting | 0,872 | **0,811** | 0,247 | 0,378 | 0,937 |
+
+![Porównanie modeli](artefakty/porownanie_modeli.png)
+![Macierze pomyłek](artefakty/macierze_pomylek.png)
+
+**Najważniejsze wskaźniki** (wg lasu losowego) to miary rentowności, zadłużenia i zdolności do obsługi
+zobowiązań:
+
+![Ważność cech](artefakty/waznosc_cech.png)
+
+### Scenariusz kosztowy
+
+Przy założeniu, że przeoczony bankrut kosztuje 200 000 zł, a fałszywy alarm 5 000 zł, najtańszy okazuje się
+**Gradient Boosting** (≈ 21 mln zł) — model o najwyższej czułości, a **nie** ten o najwyższej trafności.
+To pokazuje, że dobór modelu powinien wynikać z kosztu błędów, a nie z pojedynczej metryki.
 
 ## 🧠 Wnioski
 
-_(uzupełnione na końcu projektu)_
+- Sama **trafność (accuracy) jest myląca** przy ~5% bankrutów — KNN osiąga 95% trafności, nie wykrywając
+  praktycznie żadnego bankruta.
+- **Równoważenie klas** (`class_weight` / `sample_weight`) jest niezbędne, by model w ogóle wykrywał bankrutów.
+- **Nie ma jednego „najlepszego" modelu** — Las losowy daje najlepszy balans (F1, AUC), a Gradient Boosting
+  wyłapuje najwięcej bankrutów. Wybór zależy od kosztu błędów (patrz scenariusz kosztowy).
+- Wskazania modelu są spójne z intuicją ekonomiczną, co potwierdza analiza **SHAP**.

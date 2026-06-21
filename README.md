@@ -86,8 +86,8 @@ Ze względu na niezbalansowanie kluczowe są metryki dla klasy „bankrut", a ni
 | Model | Trafność | Czułość | Precyzja | F1 | AUC |
 |---|---|---|---|---|---|
 | KNN | 0,952 | 0,002 | 0,500 | 0,005 | 0,722 |
-| Drzewo decyzyjne | 0,807 | 0,723 | 0,163 | 0,266 | 0,854 |
-| **Las losowy** ⭐ | **0,963** | 0,344 | **0,762** | **0,474** | **0,945** |
+| Decision Tree | 0,807 | 0,723 | 0,163 | 0,266 | 0,854 |
+| **Random Forest** ⭐ | **0,963** | 0,344 | **0,762** | **0,474** | **0,945** |
 | Gradient Boosting | 0,875 | **0,818** | 0,254 | 0,387 | 0,937 |
 
 ![Porównanie modeli](artefakty/porownanie_modeli.png)
@@ -109,6 +109,6 @@ To pokazuje, że dobór modelu powinien wynikać z kosztu błędów, a nie z poj
 - Sama **trafność (accuracy) jest myląca** przy ~5% bankrutów — KNN osiąga 95% trafności, nie wykrywając
   praktycznie żadnego bankruta.
 - **Równoważenie klas** (`class_weight` / `sample_weight`) jest niezbędne, by model w ogóle wykrywał bankrutów.
-- **Nie ma jednego „najlepszego" modelu** — Las losowy daje najlepszy balans (F1, AUC), a Gradient Boosting
+- **Nie ma jednego „najlepszego" modelu** — Random Forest daje najlepszy balans (F1, AUC), a Gradient Boosting
   wyłapuje najwięcej bankrutów. Wybór zależy od kosztu błędów (patrz scenariusz kosztowy).
 - Wskazania modelu są spójne z intuicją ekonomiczną, co potwierdza analiza **SHAP**.

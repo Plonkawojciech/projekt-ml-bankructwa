@@ -30,12 +30,8 @@ export default function Strona() {
       });
   }, []);
 
-  const prob = useMemo(
-    () => (model ? prawdopodobienstwo(model, wartosci) : 0),
-    [model, wartosci]
-  );
+  const prob = useMemo(() => (model ? prawdopodobienstwo(model, wartosci) : 0), [model, wartosci]);
 
-  // wkład każdego z 8 wskaźników: o ile zmienia ryzyko względem swojej mediany
   const wklady = useMemo(() => {
     if (!model) return [];
     return model.cechy_glowne
@@ -53,8 +49,6 @@ export default function Strona() {
   const ustaw = (key: string, v: number) => setWartosci((w) => ({ ...w, [key]: v }));
   const preset = (p: Record<string, number>) => setWartosci({ ...p });
 
-  // progi ustawione względem bazowej częstości bankructw (~5%): model zwraca skalibrowane
-  // prawdopodobieństwo, więc 3× powyżej bazy to już ryzyko podwyższone, a ~3× więcej — wysokie.
   const band =
     prob < 0.06
       ? { kolor: "var(--green)", txt: "Niskie ryzyko" }
@@ -62,9 +56,9 @@ export default function Strona() {
       ? { kolor: "var(--amber)", txt: "Podwyższone ryzyko" }
       : { kolor: "var(--red)", txt: "Wysokie ryzyko" };
 
+  const frac = Math.min(1, prob / 0.4); // 40% prawdopodobieństwa = pełny łuk
   const maxWklad = Math.max(0.001, ...wklady.map((w) => Math.abs(w.efekt)));
 
-  // scenariusz kosztowy z macierzy pomyłek: cm = [[TN, FP], [FN, TP]]
   const fnNum = Number(kosztFN) || 0;
   const fpNum = Number(kosztFP) || 0;
   const koszty = Object.entries(model.macierze).map(([nazwa, cm]) => ({
@@ -77,14 +71,34 @@ export default function Strona() {
 
   return (
     <main>
+      {/* NAV */}
+      <nav className="nav">
+        <div className="nav-inner">
+          <div className="brand">
+            <span className="dot" />
+            Bankrupt-AI
+          </div>
+          <div className="nav-links">
+            <a href="#wykrywacz">Wykrywacz</a>
+            <a href="#modele">Modele</a>
+            <a href="#koszt">Koszty</a>
+            <a className="gh" href="https://github.com/Plonkawojciech/projekt-ml-bankructwa" target="_blank" rel="noreferrer">
+              GitHub ↗
+            </a>
+          </div>
+        </div>
+      </nav>
+
       {/* HERO */}
       <header className="hero">
-        <div className="wrap">
+        <div className="hero-inner">
           <span className="eyebrow">Projekt ML · Uczenie maszynowe w Python</span>
-          <h1>Czy ta firma zbankrutuje?</h1>
+          <h1>
+            Czy ta firma <span className="grad">zbankrutuje?</span>
+          </h1>
           <p className="lead">
             Model uczenia maszynowego przewidujący bankructwo polskich firm na podstawie 64 wskaźników
-            finansowych. Porównanie czterech modeli, analiza kosztowa i interaktywny wykrywacz ryzyka.
+            finansowych. Porównanie czterech modeli, wyjaśnialność i analiza kosztowa — w jednym miejscu.
           </p>
           <div className="stats">
             <div className="stat">
@@ -108,13 +122,13 @@ export default function Strona() {
       </header>
 
       {/* WYKRYWACZ */}
-      <section>
+      <section id="wykrywacz">
         <div className="wrap">
           <p className="kicker">Interaktywny wykrywacz</p>
           <h2>Sprawdź ryzyko firmy</h2>
           <p className="sub">
-            Ustaw osiem najważniejszych wskaźników, a model (Gradient Boosting, liczony w przeglądarce)
-            na żywo oszacuje prawdopodobieństwo bankructwa. Skorzystaj z gotowych profili, by zobaczyć kontrast.
+            Ustaw osiem najważniejszych wskaźników, a model (Gradient Boosting, liczony w przeglądarce) na
+            żywo oszacuje prawdopodobieństwo bankructwa. Skorzystaj z gotowych profili, by zobaczyć kontrast.
           </p>
 
           <div className="predictor">
@@ -155,15 +169,24 @@ export default function Strona() {
             </div>
 
             <div className="card verdict">
-              <div className="bigpct" style={{ color: band.kolor }}>
-                {fmtPct(prob)}
-              </div>
-              <div className="tag" style={{ background: band.kolor, color: "#fff" }}>
-                {band.txt}
-              </div>
-              <div className="track">
-                {/* skala 0–40%: większość firm mieści się nisko, więc rozciągamy zakres dla czytelności */}
-                <div className="marker" style={{ left: `${Math.min(100, prob * 250)}%` }} />
+              <div className="gauge-wrap">
+                <svg className="gauge" viewBox="0 0 230 126" role="img" aria-label={`Ryzyko ${fmtPct(prob)}`}>
+                  <path className="gauge-bg" d="M15 116 A100 100 0 0 1 215 116" pathLength={100} />
+                  <path
+                    className="gauge-fill"
+                    d="M15 116 A100 100 0 0 1 215 116"
+                    pathLength={100}
+                    style={{ stroke: band.kolor, strokeDasharray: `${frac * 100} 100` }}
+                  />
+                </svg>
+                <div className="gauge-center">
+                  <div className="bigpct" style={{ color: band.kolor }}>
+                    {fmtPct(prob)}
+                  </div>
+                  <div className="tag" style={{ background: band.kolor, color: "#fff" }}>
+                    {band.txt}
+                  </div>
+                </div>
               </div>
               <p className="baserate">Bazowa częstość bankructw w zbiorze: ~5%</p>
 
@@ -180,13 +203,13 @@ export default function Strona() {
                           background: w.efekt > 0 ? "var(--red)" : "var(--green)",
                         }}
                       />
-                      <span style={{ color: w.efekt > 0 ? "var(--red)" : "var(--green)", fontWeight: 600 }}>
+                      <span style={{ color: w.efekt > 0 ? "var(--red)" : "var(--green)", fontWeight: 700 }}>
                         {w.efekt > 0 ? "↑" : "↓"}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p style={{ fontSize: "12.5px", color: "var(--muted)", margin: 0 }}>
+                  <p style={{ fontSize: "12.5px", color: "var(--faint)", margin: 0 }}>
                     Wszystkie wskaźniki są blisko typowych wartości — brak wyróżniających się czynników ryzyka.
                   </p>
                 )}
@@ -196,8 +219,8 @@ export default function Strona() {
         </div>
       </section>
 
-      {/* PORÓWNANIE MODELI */}
-      <section>
+      {/* MODELE */}
+      <section id="modele">
         <div className="wrap">
           <p className="kicker">Wyniki</p>
           <h2>Porównanie czterech modeli</h2>
@@ -207,7 +230,7 @@ export default function Strona() {
             wyłapuje) oraz <strong>precyzja</strong>.
           </p>
 
-          <div className="card" style={{ overflowX: "auto" }}>
+          <div className="card tablecard">
             <table className="table">
               <thead>
                 <tr>
@@ -236,7 +259,7 @@ export default function Strona() {
           <div className="figure">
             <img src="/porownanie_modeli.png" alt="Porównanie metryk modeli" />
             <p className="figcap">
-              Porównanie metryk dla klasy „bankrut”. Las losowy daje najlepszy balans, Gradient Boosting
+              Porównanie metryk dla klasy „bankrut”. Random Forest daje najlepszy balans, Gradient Boosting
               wyłapuje najwięcej bankrutów (najwyższa czułość).
             </p>
           </div>
@@ -251,24 +274,24 @@ export default function Strona() {
         </div>
       </section>
 
-      {/* WAŻNOŚĆ CECH */}
-      <section>
+      {/* CECHY */}
+      <section id="cechy">
         <div className="wrap">
           <p className="kicker">Wyjaśnialność</p>
           <h2>Co decyduje o bankructwie</h2>
           <p className="sub">
-            Las losowy ocenia, które wskaźniki najsilniej wpływają na predykcję. Dominują miary
+            Random Forest ocenia, które wskaźniki najsilniej wpływają na predykcję. Dominują miary
             zadłużenia, rentowności i zdolności do obsługi zobowiązań.
           </p>
           <div className="figure">
             <img src="/waznosc_cech.png" alt="Ważność wskaźników finansowych" />
-            <p className="figcap">Najważniejsze wskaźniki według lasu losowego.</p>
+            <p className="figcap">Najważniejsze wskaźniki według modelu Random Forest.</p>
           </div>
         </div>
       </section>
 
-      {/* SCENARIUSZ KOSZTOWY */}
-      <section>
+      {/* KOSZT */}
+      <section id="koszt">
         <div className="wrap">
           <p className="kicker">Analiza biznesowa</p>
           <h2>Scenariusz kosztowy</h2>
@@ -282,53 +305,61 @@ export default function Strona() {
             <div className="costgrid">
               <div className="field">
                 <label>Koszt przeoczonego bankruta (fałszywie „zdrowa”)</label>
-                <input
-                  type="number"
-                  value={kosztFN}
-                  min={0}
-                  step={10000}
-                  inputMode="numeric"
-                  onChange={(e) => setKosztFN(e.target.value)}
-                />
+                <div className="inputwrap">
+                  <input
+                    type="number"
+                    value={kosztFN}
+                    min={0}
+                    step={10000}
+                    inputMode="numeric"
+                    onChange={(e) => setKosztFN(e.target.value)}
+                  />
+                  <span className="unit">zł</span>
+                </div>
                 <div className="hint">strata na niespłaconym kredycie</div>
               </div>
               <div className="field">
                 <label>Koszt fałszywego alarmu (zdrowa oznaczona „bankrut”)</label>
-                <input
-                  type="number"
-                  value={kosztFP}
-                  min={0}
-                  step={1000}
-                  inputMode="numeric"
-                  onChange={(e) => setKosztFP(e.target.value)}
-                />
+                <div className="inputwrap">
+                  <input
+                    type="number"
+                    value={kosztFP}
+                    min={0}
+                    step={1000}
+                    inputMode="numeric"
+                    onChange={(e) => setKosztFP(e.target.value)}
+                  />
+                  <span className="unit">zł</span>
+                </div>
                 <div className="hint">utracona marża / koszt weryfikacji</div>
               </div>
             </div>
 
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  <th>Przeoczeni bankruci</th>
-                  <th>Fałszywe alarmy</th>
-                  <th>Łączny koszt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {koszty.map((k) => (
-                  <tr key={k.nazwa} className={k.koszt === minKoszt ? "best" : ""}>
-                    <td>
-                      {k.nazwa}
-                      {k.koszt === minKoszt && <span className="pill">najtańszy</span>}
-                    </td>
-                    <td>{fmtInt(k.fn)}</td>
-                    <td>{fmtInt(k.fp)}</td>
-                    <td>{fmtZl(k.koszt)}</td>
+            <div className="tablecard" style={{ padding: 0 }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Przeoczeni bankruci</th>
+                    <th>Fałszywe alarmy</th>
+                    <th>Łączny koszt</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {koszty.map((k) => (
+                    <tr key={k.nazwa} className={k.koszt === minKoszt ? "best" : ""}>
+                      <td>
+                        {k.nazwa}
+                        {k.koszt === minKoszt && <span className="pill">najtańszy</span>}
+                      </td>
+                      <td>{fmtInt(k.fn)}</td>
+                      <td>{fmtInt(k.fp)}</td>
+                      <td>{fmtZl(k.koszt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

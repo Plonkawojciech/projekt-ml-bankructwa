@@ -116,11 +116,11 @@ Trenujemy cztery klasyfikatory o różnej naturze:
 
 - **K-Nearest Neighbors (KNN)** — klasyfikuje firmę na podstawie najbardziej podobnych firm; wymaga
   przeskalowanych danych, bo opiera się na odległościach.
-- **Drzewo decyzyjne** — ciąg pytań tak/nie; w pełni interpretowalne.
-- **Las losowy** — zespół setek drzew głosujących większością; zwykle najdokładniejszy.
+- **Decision Tree** — ciąg pytań tak/nie; w pełni interpretowalne.
+- **Random Forest** — zespół setek drzew głosujących większością; zwykle najdokładniejszy.
 - **Gradient Boosting** — drzewa budowane sekwencyjnie, każde poprawia błędy poprzedniego.
 
-Trzy z nich (drzewo, las, boosting) uczymy z **równoważeniem klas** (`class_weight` / `sample_weight`),
+Trzy z nich (Decision Tree, Random Forest, Gradient Boosting) uczymy z **równoważeniem klas** (`class_weight` / `sample_weight`),
 aby model nie ignorował rzadkich bankrutów. KNN nie ma takiej opcji — posłuży jako punkt odniesienia
 pokazujący, dlaczego naiwne podejście zawodzi na niezbalansowanych danych."""))
 
@@ -131,11 +131,11 @@ knn = KNeighborsClassifier(n_neighbors=15).fit(X_train_s, y_train)
 modele['KNN'] = (knn, X_test_s)
 
 dt = DecisionTreeClassifier(max_depth=6, class_weight='balanced', random_state=RNG).fit(X_train, y_train)
-modele['Drzewo decyzyjne'] = (dt, X_test)
+modele['Decision Tree'] = (dt, X_test)
 
 rf = RandomForestClassifier(n_estimators=300, class_weight='balanced',
                             n_jobs=-1, random_state=RNG).fit(X_train, y_train)
-modele['Las losowy'] = (rf, X_test)
+modele['Random Forest'] = (rf, X_test)
 
 gb = GradientBoostingClassifier(random_state=RNG).fit(X_train, y_train, sample_weight=wagi)
 modele['Gradient Boosting'] = (gb, X_test)
@@ -171,7 +171,7 @@ wyniki.round(3)"""))
 cells.append(md(
 """Tabela powyżej dobrze pokazuje kompromisy: KNN osiąga wysoką trafność (~95%) mimo **czułości bliskiej zeru** —
 najlepszy dowód, że sama trafność myli. Drzewo i Gradient Boosting wyłapują najwięcej bankrutów (wysoka czułość)
-kosztem precyzji, a Las losowy oferuje najlepszy balans (najwyższe F1 i AUC) oraz najwyższą precyzję.
+kosztem precyzji, a Random Forest oferuje najlepszy balans (najwyższe F1 i AUC) oraz najwyższą precyzję.
 
 Poniżej pełny raport klasyfikacji dla modelu o najlepszym F1."""))
 
@@ -220,7 +220,7 @@ plt.show()"""))
 cells.append(md(
 """## Ważność cech
 
-Las losowy pozwala ocenić, które wskaźniki najsilniej wpływają na decyzję modelu. To pierwsza warstwa
+Random Forest pozwala ocenić, które wskaźniki najsilniej wpływają na decyzję modelu. To pierwsza warstwa
 interpretacji — pokazuje, na co model „patrzy" najbardziej."""))
 
 cells.append(code(
@@ -239,7 +239,7 @@ etyk = [f'{k} — {OPIS.get(k, k)}' for k in waznosc.index]
 
 plt.figure(figsize=(9, 5))
 sns.barplot(x=waznosc.values, y=etyk, hue=etyk, palette='viridis', legend=False)
-plt.title('Najważniejsze wskaźniki według lasu losowego')
+plt.title('Najważniejsze wskaźniki — model Random Forest')
 plt.xlabel('ważność')
 plt.ylabel('')
 plt.tight_layout()
@@ -256,11 +256,11 @@ bankructwa), a kolor to wartość wskaźnika (czerwony = wysoka). To najbardziej
 cells.append(code(
 """import shap
 
-# SHAP wyjaśnia najlepszy model (zwykle Las losowy). TreeExplainer wymaga modelu drzewiastego;
-# najlepszy wg F1 jest zawsze jednym z nich (drzewo / las / boosting), nie KNN.
-modele_drzewiaste = {'Drzewo decyzyjne', 'Las losowy', 'Gradient Boosting'}
+# SHAP wyjaśnia najlepszy model (zwykle Random Forest). TreeExplainer wymaga modelu drzewiastego;
+# najlepszy wg F1 jest zawsze jednym z nich (Decision Tree / Random Forest / Gradient Boosting), nie KNN.
+modele_drzewiaste = {'Decision Tree', 'Random Forest', 'Gradient Boosting'}
 model_do_shap = model_najlepszy if najlepszy in modele_drzewiaste else rf
-print(f'SHAP wyjaśnia model: {najlepszy if najlepszy in modele_drzewiaste else "Las losowy"}')
+print(f'SHAP wyjaśnia model: {najlepszy if najlepszy in modele_drzewiaste else "Random Forest"}')
 
 # wyjaśniamy na próbce danych testowych (dla szybkości)
 proba_n = min(800, len(X_test))
@@ -319,9 +319,9 @@ cells.append(md(
 
 - **Dane są silnie niezbalansowane** (~5% bankrutów), co czyni samą trafność (accuracy) bezużyteczną miarą —
   KNN osiąga ~95% trafności, praktycznie nie wykrywając bankrutów.
-- **Równoważenie klas jest kluczowe.** Modele uczone z `class_weight`/`sample_weight` (drzewo, las, boosting)
+- **Równoważenie klas jest kluczowe.** Modele uczone z `class_weight`/`sample_weight` (Decision Tree, Random Forest, Gradient Boosting)
   faktycznie wykrywają bankrutów, podczas gdy naiwny KNN zawodzi.
-- **Nie ma jednego „najlepszego" modelu — zależy od celu.** Las losowy daje najlepszy balans (F1, AUC) i
+- **Nie ma jednego „najlepszego" modelu — zależy od celu.** Random Forest daje najlepszy balans (F1, AUC) i
   wysoką precyzję; Gradient Boosting wyłapuje najwięcej bankrutów (najwyższa czułość) kosztem fałszywych alarmów.
 - **Analiza kosztowa zmienia ranking.** Gdy przeoczony bankrut jest dużo droższy niż fałszywy alarm, najtańszy
   okazuje się model o najwyższej czułości — a nie ten o najwyższej trafności. To pokazuje, że dobór modelu

@@ -103,10 +103,10 @@ knn = KNeighborsClassifier(n_neighbors=15).fit(Xtr_s, y_train)
 modele['KNN'] = (knn, Xte_s)
 
 dt = DecisionTreeClassifier(max_depth=6, class_weight='balanced', random_state=RNG).fit(X_train, y_train)
-modele['Drzewo decyzyjne'] = (dt, X_test)
+modele['Decision Tree'] = (dt, X_test)
 
 rf = RandomForestClassifier(n_estimators=300, class_weight='balanced', n_jobs=-1, random_state=RNG).fit(X_train, y_train)
-modele['Las losowy'] = (rf, X_test)
+modele['Random Forest'] = (rf, X_test)
 
 gb = GradientBoostingClassifier(random_state=RNG).fit(X_train, y_train, sample_weight=sw)
 modele['Gradient Boosting'] = (gb, X_test)
@@ -236,7 +236,7 @@ plt.figure(figsize=(9, 5))
 top12 = waznosc.head(12)[::-1]
 etyk12 = [f'{k} — {OPIS.get(k, k)[:28]}' for k in top12.index]
 sns.barplot(x=top12.values, y=etyk12, hue=etyk12, palette='viridis', legend=False)
-plt.title('Najważniejsze wskaźniki wg lasu losowego'); plt.xlabel('ważność'); plt.ylabel('')
+plt.title('Najważniejsze wskaźniki — model Random Forest'); plt.xlabel('ważność'); plt.ylabel('')
 plt.tight_layout(); plt.savefig(ART / 'waznosc_cech.png', dpi=130); plt.close()
 print('   zapisano wykresy PNG do artefakty/')
 

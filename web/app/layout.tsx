@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bankrupt-AI — przewidywanie bankructwa polskich firm",
+  title: "Predykcja bankructwa polskich firm",
   description:
-    "Model uczenia maszynowego przewidujący bankructwo polskich firm na podstawie 64 wskaźników finansowych. Projekt zaliczeniowy ML.",
+    "Model uczenia maszynowego przewidujący bankructwo polskich firm na podstawie 64 wskaźników finansowych.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -5,7 +5,7 @@ Projekt zaliczeniowy z przedmiotu **Uczenie maszynowe w Python — laboratorium*
 > Model uczenia maszynowego, który na podstawie wskaźników finansowych firmy przewiduje,
 > czy grozi jej bankructwo — wraz z interaktywną stroną www i analizą kosztową dla banku/inwestora.
 
-**🔴 Demo na żywo: [bankrupt-ai.vercel.app](https://bankrupt-ai.vercel.app)**
+**🔴 Demo na żywo: [predykcja-bankructwa.vercel.app](https://predykcja-bankructwa.vercel.app)**
 
 ---
 

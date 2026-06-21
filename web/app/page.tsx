@@ -76,7 +76,7 @@ export default function Strona() {
         <div className="nav-inner">
           <div className="brand">
             <span className="dot" />
-            Bankrupt-AI
+            Predykcja bankructwa
           </div>
           <div className="nav-links">
             <a href="#wykrywacz">Wykrywacz</a>
@@ -92,9 +92,8 @@ export default function Strona() {
       {/* HERO */}
       <header className="hero">
         <div className="hero-inner">
-          <span className="eyebrow">Projekt ML · Uczenie maszynowe w Python</span>
           <h1>
-            Czy ta firma <span className="grad">zbankrutuje?</span>
+            Predykcja <span className="grad">bankructwa</span> polskich firm
           </h1>
           <p className="lead">
             Model uczenia maszynowego przewidujący bankructwo polskich firm na podstawie 64 wskaźników
@@ -367,7 +366,7 @@ export default function Strona() {
       {/* FOOTER */}
       <footer>
         <div className="wrap">
-          <strong>Bankrupt-AI</strong> — projekt zaliczeniowy z przedmiotu „Uczenie maszynowe w Python”.
+          Model uczenia maszynowego przewidujący bankructwo firm na podstawie 64 wskaźników finansowych.
           <br />
           Dane:{" "}
           <a href="https://archive.ics.uci.edu/dataset/365/polish+companies+bankruptcy+data" target="_blank" rel="noreferrer">

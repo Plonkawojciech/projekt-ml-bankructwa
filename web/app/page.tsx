@@ -18,8 +18,8 @@ const NAZWY_METRYK: [keyof ModelData["modele"][string], string][] = [
 export default function Strona() {
   const [model, setModel] = useState<ModelData | null>(null);
   const [wartosci, setWartosci] = useState<Record<string, number>>({});
-  const [kosztFN, setKosztFN] = useState(200000);
-  const [kosztFP, setKosztFP] = useState(5000);
+  const [kosztFN, setKosztFN] = useState("200000");
+  const [kosztFP, setKosztFP] = useState("5000");
 
   useEffect(() => {
     fetch("/model.json")
@@ -53,21 +53,25 @@ export default function Strona() {
   const ustaw = (key: string, v: number) => setWartosci((w) => ({ ...w, [key]: v }));
   const preset = (p: Record<string, number>) => setWartosci({ ...p });
 
+  // progi ustawione względem bazowej częstości bankructw (~5%): model zwraca skalibrowane
+  // prawdopodobieństwo, więc 3× powyżej bazy to już ryzyko podwyższone, a ~3× więcej — wysokie.
   const band =
-    prob < 0.2
+    prob < 0.06
       ? { kolor: "var(--green)", txt: "Niskie ryzyko" }
-      : prob < 0.5
-      ? { kolor: "var(--amber)", txt: "Umiarkowane ryzyko" }
+      : prob < 0.15
+      ? { kolor: "var(--amber)", txt: "Podwyższone ryzyko" }
       : { kolor: "var(--red)", txt: "Wysokie ryzyko" };
 
   const maxWklad = Math.max(0.001, ...wklady.map((w) => Math.abs(w.efekt)));
 
   // scenariusz kosztowy z macierzy pomyłek: cm = [[TN, FP], [FN, TP]]
+  const fnNum = Number(kosztFN) || 0;
+  const fpNum = Number(kosztFP) || 0;
   const koszty = Object.entries(model.macierze).map(([nazwa, cm]) => ({
     nazwa,
     fn: cm[1][0],
     fp: cm[0][1],
-    koszt: cm[1][0] * kosztFN + cm[0][1] * kosztFP,
+    koszt: cm[1][0] * fnNum + cm[0][1] * fpNum,
   }));
   const minKoszt = Math.min(...koszty.map((k) => k.koszt));
 
@@ -130,6 +134,8 @@ export default function Strona() {
                       max={c.p95}
                       step={step}
                       value={v}
+                      aria-label={c.label}
+                      aria-valuetext={v.toFixed(2)}
                       onChange={(e) => ustaw(c.key, parseFloat(e.target.value))}
                     />
                   </div>
@@ -156,13 +162,15 @@ export default function Strona() {
                 {band.txt}
               </div>
               <div className="track">
-                <div className="marker" style={{ left: `${Math.min(100, prob * 100)}%` }} />
+                {/* skala 0–40%: większość firm mieści się nisko, więc rozciągamy zakres dla czytelności */}
+                <div className="marker" style={{ left: `${Math.min(100, prob * 250)}%` }} />
               </div>
+              <p className="baserate">Bazowa częstość bankructw w zbiorze: ~5%</p>
 
-              {wklady.length > 0 && (
-                <div className="contrib">
-                  <h4>Co najbardziej wpływa na ten wynik</h4>
-                  {wklady.map((w) => (
+              <div className="contrib">
+                <h4>Co najbardziej wpływa na ten wynik</h4>
+                {wklady.length > 0 ? (
+                  wklady.map((w) => (
                     <div className="crow" key={w.key}>
                       <span className="cn">{w.label}</span>
                       <div
@@ -176,9 +184,13 @@ export default function Strona() {
                         {w.efekt > 0 ? "↑" : "↓"}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                ) : (
+                  <p style={{ fontSize: "12.5px", color: "var(--muted)", margin: 0 }}>
+                    Wszystkie wskaźniki są blisko typowych wartości — brak wyróżniających się czynników ryzyka.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -275,7 +287,8 @@ export default function Strona() {
                   value={kosztFN}
                   min={0}
                   step={10000}
-                  onChange={(e) => setKosztFN(Math.max(0, parseInt(e.target.value) || 0))}
+                  inputMode="numeric"
+                  onChange={(e) => setKosztFN(e.target.value)}
                 />
                 <div className="hint">strata na niespłaconym kredycie</div>
               </div>
@@ -286,7 +299,8 @@ export default function Strona() {
                   value={kosztFP}
                   min={0}
                   step={1000}
-                  onChange={(e) => setKosztFP(Math.max(0, parseInt(e.target.value) || 0))}
+                  inputMode="numeric"
+                  onChange={(e) => setKosztFP(e.target.value)}
                 />
                 <div className="hint">utracona marża / koszt weryfikacji</div>
               </div>

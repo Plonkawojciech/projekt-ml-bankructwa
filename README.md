@@ -84,9 +84,9 @@ Ze względu na niezbalansowanie kluczowe są metryki dla klasy „bankrut", a ni
 | Model | Trafność | Czułość | Precyzja | F1 | AUC |
 |---|---|---|---|---|---|
 | KNN | 0,952 | 0,002 | 0,500 | 0,005 | 0,722 |
-| Drzewo decyzyjne | 0,801 | 0,725 | 0,158 | 0,260 | 0,850 |
-| **Las losowy** ⭐ | **0,963** | 0,342 | **0,773** | **0,474** | **0,945** |
-| Gradient Boosting | 0,872 | **0,811** | 0,247 | 0,378 | 0,937 |
+| Drzewo decyzyjne | 0,807 | 0,723 | 0,163 | 0,266 | 0,854 |
+| **Las losowy** ⭐ | **0,963** | 0,344 | **0,762** | **0,474** | **0,945** |
+| Gradient Boosting | 0,875 | **0,818** | 0,254 | 0,387 | 0,937 |
 
 ![Porównanie modeli](artefakty/porownanie_modeli.png)
 ![Macierze pomyłek](artefakty/macierze_pomylek.png)
@@ -99,7 +99,7 @@ zobowiązań:
 ### Scenariusz kosztowy
 
 Przy założeniu, że przeoczony bankrut kosztuje 200 000 zł, a fałszywy alarm 5 000 zł, najtańszy okazuje się
-**Gradient Boosting** (≈ 21 mln zł) — model o najwyższej czułości, a **nie** ten o najwyższej trafności.
+**Gradient Boosting** (≈ 20 mln zł) — model o najwyższej czułości, a **nie** ten o najwyższej trafności.
 To pokazuje, że dobór modelu powinien wynikać z kosztu błędów, a nie z pojedynczej metryki.
 
 ## 🧠 Wnioski

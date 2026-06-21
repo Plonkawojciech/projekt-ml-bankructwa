@@ -57,8 +57,9 @@ print('Środowisko gotowe ✅')"""))
 cells.append(md(
 """## Wczytanie i przygotowanie danych
 
-Powtarzamy w skrócie kroki z części pierwszej: pobranie zbioru UCI, scalenie pięciu plików, konwersję
-etykiety i uzupełnienie braków medianą. Dzięki temu notebook działa samodzielnie."""))
+Powtarzamy w skrócie kroki z części pierwszej: pobranie zbioru UCI, scalenie pięciu plików i konwersję
+etykiety. Uzupełnienie braków celowo wykonujemy dopiero **po** podziale na trening i test (kolejna sekcja),
+aby informacja ze zbioru testowego nie wpłynęła na przygotowanie danych. Dzięki temu notebook działa samodzielnie."""))
 
 cells.append(code(
 """URL = 'https://archive.ics.uci.edu/static/public/365/polish+companies+bankruptcy+data.zip'
@@ -75,7 +76,7 @@ with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
 df = pd.concat(ramki, ignore_index=True)
 df['class'] = df['class'].apply(lambda x: int(x.decode()) if isinstance(x, bytes) else int(x))
 CECHY = [c for c in df.columns if c.startswith('Attr')]
-df[CECHY] = df[CECHY].fillna(df[CECHY].median())
+# braki uzupełnimy PO podziale na trening/test (medianą z treningu) — żeby uniknąć wycieku danych
 
 print('Rozmiar zbioru:', df.shape)
 print(f'Bankruci: {df["class"].sum()} ({df["class"].mean()*100:.2f}%)')"""))
@@ -85,15 +86,21 @@ cells.append(md(
 
 Zmienne objaśniające (`X`) to 64 wskaźniki finansowe, a zmienna objaśniana (`y`) to etykieta bankructwa.
 Zbiór dzielimy na **80% treningu** i **20% testu**, z opcją `stratify`, która zachowuje tę samą proporcję
-bankrutów w obu częściach — istotne przy tak rzadkiej klasie. Dodatkowo przygotowujemy wersję przeskalowaną
-(dla KNN, który mierzy odległości) oraz wagi klas równoważące rzadkość bankrutów."""))
+bankrutów w obu częściach — istotne przy tak rzadkiej klasie. Dopiero teraz uzupełniamy braki — **medianą
+wyznaczoną wyłącznie na treningu** i zastosowaną do obu zbiorów, aby uniknąć wycieku danych. Na koniec
+przygotowujemy wersję przeskalowaną (dla KNN, który mierzy odległości) oraz wagi klas równoważące rzadkość bankrutów."""))
 
 cells.append(code(
-"""X = df[CECHY].values
+"""X = df[CECHY].values   # z brakami (NaN)
 y = df['class'].values
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, stratify=y, random_state=RNG)
+
+# imputacja: mediana liczona TYLKO na treningu, zastosowana do treningu i testu
+med_train = np.nanmedian(X_train, axis=0)
+X_train = np.where(np.isnan(X_train), med_train, X_train)
+X_test = np.where(np.isnan(X_test), med_train, X_test)
 
 scaler = StandardScaler().fit(X_train)
 X_train_s, X_test_s = scaler.transform(X_train), scaler.transform(X_test)
@@ -162,9 +169,9 @@ wyniki = pd.DataFrame({nazwa: ocena(m, Xte) for nazwa, (m, Xte) in modele.items(
 wyniki.round(3)"""))
 
 cells.append(md(
-"""Tabela powyżej dobrze pokazuje kompromisy: KNN ma najwyższą trafność, ale **czułość bliską zeru** —
-jest praktycznie bezużyteczny do wykrywania bankructw. Drzewo i Gradient Boosting wyłapują dużo bankrutów
-(wysoka czułość) kosztem precyzji, a Las losowy oferuje najlepszy balans (najwyższe F1 i AUC).
+"""Tabela powyżej dobrze pokazuje kompromisy: KNN osiąga wysoką trafność (~95%) mimo **czułości bliskiej zeru** —
+najlepszy dowód, że sama trafność myli. Drzewo i Gradient Boosting wyłapują najwięcej bankrutów (wysoka czułość)
+kosztem precyzji, a Las losowy oferuje najlepszy balans (najwyższe F1 i AUC) oraz najwyższą precyzję.
 
 Poniżej pełny raport klasyfikacji dla modelu o najlepszym F1."""))
 
@@ -249,12 +256,18 @@ bankructwa), a kolor to wartość wskaźnika (czerwony = wysoka). To najbardziej
 cells.append(code(
 """import shap
 
-# wyjaśniamy najlepszy model na próbce danych testowych (dla szybkości)
+# SHAP wyjaśnia najlepszy model (zwykle Las losowy). TreeExplainer wymaga modelu drzewiastego;
+# najlepszy wg F1 jest zawsze jednym z nich (drzewo / las / boosting), nie KNN.
+modele_drzewiaste = {'Drzewo decyzyjne', 'Las losowy', 'Gradient Boosting'}
+model_do_shap = model_najlepszy if najlepszy in modele_drzewiaste else rf
+print(f'SHAP wyjaśnia model: {najlepszy if najlepszy in modele_drzewiaste else "Las losowy"}')
+
+# wyjaśniamy na próbce danych testowych (dla szybkości)
 proba_n = min(800, len(X_test))
 idx = np.random.RandomState(RNG).choice(len(X_test), proba_n, replace=False)
 probka = pd.DataFrame(X_test[idx], columns=CECHY)
 
-explainer = shap.TreeExplainer(rf)
+explainer = shap.TreeExplainer(model_do_shap)
 shap_out = explainer(probka)
 vals = shap_out.values
 if vals.ndim == 3:          # (n, cechy, klasy) -> bierzemy klasę 'bankrut'

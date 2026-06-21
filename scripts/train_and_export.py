@@ -80,12 +80,16 @@ with zipfile.ZipFile(io.BytesIO(zb)) as z:
 df = pd.concat(ramki, ignore_index=True)
 df['class'] = df['class'].apply(lambda x: int(x.decode()) if isinstance(x, bytes) else int(x))
 CECHY = [c for c in df.columns if c.startswith('Attr')]
-df[CECHY] = df[CECHY].fillna(df[CECHY].median())
 print(f'   wierszy: {len(df)}, bankrutów: {df["class"].sum()} ({df["class"].mean()*100:.2f}%)')
 
-X = df[CECHY].values
+X = df[CECHY].values   # z brakami (NaN) — imputacja PO podziale, by uniknąć wycieku danych
 y = df['class'].values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=RNG)
+
+# imputacja braków: mediana wyznaczona WYŁĄCZNIE na treningu, zastosowana do obu zbiorów
+med_train = np.nanmedian(X_train, axis=0)
+X_train = np.where(np.isnan(X_train), med_train, X_train)
+X_test = np.where(np.isnan(X_test), med_train, X_test)
 
 scaler = StandardScaler().fit(X_train)
 Xtr_s, Xte_s = scaler.transform(X_train), scaler.transform(X_test)

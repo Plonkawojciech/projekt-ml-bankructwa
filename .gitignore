@@ -24,3 +24,4 @@ web/tsconfig.tsbuildinfo
 # Środowiskowe
 .env
 .env.local
+.claude/

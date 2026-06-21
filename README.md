@@ -1,114 +1,85 @@
-# 🏢💀 Bankrupt-AI — przewidywanie bankructwa polskich firm
+# Przewidywanie bankructwa polskich firm
 
-Projekt zaliczeniowy z przedmiotu **Uczenie maszynowe w Python — laboratorium** (CDV, grupa 4).
+Projekt z uczenia maszynowego. Na podstawie 64 wskaźników finansowych modele klasyfikacyjne
+przewidują, czy firmie grozi bankructwo. Repozytorium zawiera analizę danych, trening i porównanie
+czterech modeli, wyjaśnialność (SHAP), analizę kosztową oraz stronę prezentującą wyniki.
 
-> Model uczenia maszynowego, który na podstawie wskaźników finansowych firmy przewiduje,
-> czy grozi jej bankructwo — wraz z interaktywną stroną www i analizą kosztową dla banku/inwestora.
+Demo: https://predykcja-bankructwa.vercel.app
 
-**🔴 Demo na żywo: [predykcja-bankructwa.vercel.app](https://predykcja-bankructwa.vercel.app)**
+Autor: Wojciech Płonka
 
----
+## Opis
 
-## 👤 Skład zespołu
+Celem jest zbudowanie i porównanie kilku modeli, które na podstawie wskaźników finansowych
+(rentowność, zadłużenie, płynność, rotacja) klasyfikują firmę jako zagrożoną bankructwem lub nie.
+Ze względu na rzadkość bankructw nacisk położono na właściwą ocenę modeli (czułość i precyzja,
+a nie sama trafność) oraz na praktyczne znaczenie błędów (analiza kosztowa).
 
-- **Wojciech Płonka** — projekt indywidualny (solo)
+## Dane
 
----
+- Źródło: [Polish Companies Bankruptcy Data](https://archive.ics.uci.edu/dataset/365/polish+companies+bankruptcy+data)
+  (UCI Machine Learning Repository, zbiór 365).
+- Około 43 000 rekordów opisujących polskie firmy, każdy z 64 wskaźnikami finansowymi (Attr1–Attr64)
+  oraz etykietą `class` (0 — firma przetrwała, 1 — bankructwo).
+- Dane są zanonimizowane (bez nazw firm), niezbalansowane (bankruci to ok. 4,8% zbioru) i zawierają
+  braki, które uzupełniono medianą wyznaczoną na zbiorze treningowym.
 
-## 🎯 Koncepcja projektu
+## Modele i wyniki
 
-Celem jest zbudowanie i porównanie kilku modeli klasyfikacyjnych, które na podstawie
-**64 wskaźników finansowych** przedsiębiorstwa (płynność, zadłużenie, rentowność, rotacja)
-przewidują, czy firma **zbankrutuje** w nadchodzącym okresie.
-
-Projekt nie kończy się na samym modelu — powstaje też **interaktywna strona internetowa**,
-na której można wpisać dane firmy i otrzymać werdykt wraz z wyjaśnieniem (które wskaźniki
-najbardziej wpłynęły na decyzję) oraz **scenariuszem kosztowym** (ile traci instytucja
-finansowa na błędnej decyzji kredytowej).
-
-### Dane
-
-- **Źródło:** [Polish Companies Bankruptcy Data — UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/365/polish+companies+bankruptcy+data)
-- **Opis:** dane ~10 000 polskich firm zebrane przez Emerging Markets Information Service,
-  64 wskaźniki finansowe (Attr1–Attr64) + etykieta `class` (0 = firma przetrwała, 1 = bankructwo).
-- **Charakterystyka:** dane silnie **niezbalansowane** (bankrutów jest ~2–7%) oraz z **brakami danych** —
-  co czyni je realistycznym, „brudnym" zbiorem wymagającym czyszczenia i odpowiednich technik.
-
-### Planowane modele
-
-| Model | Po co |
-|---|---|
-| **K-Nearest Neighbors (KNN)** | baza odniesienia, wymaga skalowania danych |
-| **Decision Tree** | interpretowalny, daje regułki decyzyjne |
-| **Random Forest** | mocniejszy zespół drzew, zwykle najlepszy wynik |
-| **Gradient Boosting / XGBoost** | model premium do porównania |
-
-Dodatkowo: porównanie **różnych konfiguracji** (np. liczba sąsiadów w KNN, głębokość drzewa),
-techniki radzenia sobie z niezbalansowaniem (**SMOTE / class_weight**) oraz **SHAP** do wyjaśniania decyzji.
-
-### Wizualizacje
-
-- rozkład bankrutów vs zdrowych firm, mapa ciepła korelacji wskaźników
-- porównanie skuteczności modeli (accuracy / precision / recall / F1)
-- macierz pomyłek, krzywa precision-recall
-- **interaktywna strona www** (Next.js + wykresy) — formularz „sprawdź firmę"
-- **scenariusz kosztowy** — koszt błędnych decyzji w zł
-
----
-
-## 🗂️ Struktura repozytorium
-
-```
-.
-├── notebook/                       # część ML (Jupyter/Colab)
-│   ├── 01_dane_i_eksploracja.ipynb # dane → opis → czyszczenie → wizualizacje
-│   ├── 02_modele.ipynb             # trening, ocena, SHAP, scenariusz kosztowy
-│   └── archiwum_gpw/               # porzucony wariant tematu (indeksy GPW)
-├── scripts/train_and_export.py     # silnik: trening + eksport modelu dla strony
-├── artefakty/                      # wykresy wyników + metryki (JSON)
-├── web/                            # strona Next.js (deploy na Vercel)
-└── README.md
-```
-
-## 🛠️ Stack technologiczny
-
-- **ML:** Python, pandas, scikit-learn, SHAP, matplotlib/seaborn (Google Colab)
-- **Web:** Next.js, TypeScript — model (Gradient Boosting) liczony w przeglądarce w czystym JS
-- **Hosting:** Vercel | **Kod:** GitHub
-
----
-
-## 📊 Wyniki
-
-Cztery modele wytrenowano na 80% danych (43 405 firm, 4,82% bankrutów) i przetestowano na 20%.
-Ze względu na niezbalansowanie kluczowe są metryki dla klasy „bankrut", a nie ogólna trafność.
+Cztery modele wytrenowano na 80% danych i przetestowano na pozostałych 20%. Trzy z nich uczono
+z ważeniem klas, aby nie ignorowały rzadkich bankrutów.
 
 | Model | Trafność | Czułość | Precyzja | F1 | AUC |
-|---|---|---|---|---|---|
+|-------|----------|---------|----------|------|------|
 | KNN | 0,952 | 0,002 | 0,500 | 0,005 | 0,722 |
 | Decision Tree | 0,807 | 0,723 | 0,163 | 0,266 | 0,854 |
-| **Random Forest** ⭐ | **0,963** | 0,344 | **0,762** | **0,474** | **0,945** |
-| Gradient Boosting | 0,875 | **0,818** | 0,254 | 0,387 | 0,937 |
+| Random Forest | 0,963 | 0,344 | 0,762 | 0,474 | 0,945 |
+| Gradient Boosting | 0,875 | 0,818 | 0,254 | 0,387 | 0,937 |
 
 ![Porównanie modeli](artefakty/porownanie_modeli.png)
+
 ![Macierze pomyłek](artefakty/macierze_pomylek.png)
 
-**Najważniejsze wskaźniki** (wg lasu losowego) to miary rentowności, zadłużenia i zdolności do obsługi
-zobowiązań:
+Najważniejsze wskaźniki według lasu losowego to miary zadłużenia, rentowności i zdolności do
+obsługi zobowiązań:
 
 ![Ważność cech](artefakty/waznosc_cech.png)
 
-### Scenariusz kosztowy
+## Analiza kosztowa
 
-Przy założeniu, że przeoczony bankrut kosztuje 200 000 zł, a fałszywy alarm 5 000 zł, najtańszy okazuje się
-**Gradient Boosting** (≈ 20 mln zł) — model o najwyższej czułości, a **nie** ten o najwyższej trafności.
-To pokazuje, że dobór modelu powinien wynikać z kosztu błędów, a nie z pojedynczej metryki.
+Dwa typy błędów kosztują różnie. Przeoczony bankrut (kredyt dla firmy, która upadnie) jest zwykle
+dużo droższy niż fałszywy alarm. Przy założeniu, że przeoczony bankrut to 200 000 zł, a fałszywy
+alarm 5 000 zł, najtańszy okazuje się Gradient Boosting (model o najwyższej czułości), a nie ten
+o najwyższej ogólnej trafności. Dobór modelu powinien więc wynikać z kosztu błędów, a nie
+z pojedynczej metryki.
 
-## 🧠 Wnioski
+## Struktura projektu
 
-- Sama **trafność (accuracy) jest myląca** przy ~5% bankrutów — KNN osiąga 95% trafności, nie wykrywając
-  praktycznie żadnego bankruta.
-- **Równoważenie klas** (`class_weight` / `sample_weight`) jest niezbędne, by model w ogóle wykrywał bankrutów.
-- **Nie ma jednego „najlepszego" modelu** — Random Forest daje najlepszy balans (F1, AUC), a Gradient Boosting
-  wyłapuje najwięcej bankrutów. Wybór zależy od kosztu błędów (patrz scenariusz kosztowy).
-- Wskazania modelu są spójne z intuicją ekonomiczną, co potwierdza analiza **SHAP**.
+```
+notebook/
+  01_dane_i_eksploracja.ipynb   pobranie i czyszczenie danych, eksploracja, wizualizacje
+  02_modele.ipynb               trening, ocena, SHAP, analiza kosztowa, wnioski
+scripts/
+  train_and_export.py           trening modeli i eksport modelu dla strony
+  build_notebook_02.py          generator notebooka 02
+artefakty/                      wykresy wyników i metryki (JSON)
+web/                            strona (Next.js) prezentująca wyniki
+```
+
+## Uruchomienie
+
+Notebooki najłatwiej otworzyć w Google Colab (Plik > Otwórz notatnik > GitHub) lub lokalnie w
+Jupyterze. Pobierają dane i instalują zależności samodzielnie.
+
+Strona:
+
+```
+cd web
+npm install
+npm run dev
+```
+
+## Technologie
+
+- Analiza i modele: Python, pandas, scikit-learn, SHAP, matplotlib, seaborn.
+- Strona: Next.js, TypeScript. Model do demonstracji liczony jest po stronie przeglądarki.

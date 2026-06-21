@@ -7,6 +7,8 @@ const fmtPct = (x: number) => (x * 100).toFixed(1) + "%";
 const fmtInt = (x: number) => x.toLocaleString("pl-PL");
 const fmtZl = (x: number) => x.toLocaleString("pl-PL") + " zł";
 
+const REPO = "https://github.com/Plonkawojciech/projekt-ml-bankructwa";
+
 const NAZWY_METRYK: [keyof ModelData["modele"][string], string][] = [
   ["recall", "Czułość"],
   ["precision", "Precyzja"],
@@ -56,7 +58,7 @@ export default function Strona() {
       ? { kolor: "var(--amber)", txt: "Podwyższone ryzyko" }
       : { kolor: "var(--red)", txt: "Wysokie ryzyko" };
 
-  const frac = Math.min(1, prob / 0.4); // 40% prawdopodobieństwa = pełny łuk
+  const frac = Math.min(1, prob / 0.4);
   const maxWklad = Math.max(0.001, ...wklady.map((w) => Math.abs(w.efekt)));
 
   const fnNum = Number(kosztFN) || 0;
@@ -71,63 +73,147 @@ export default function Strona() {
 
   return (
     <main>
-      {/* NAV */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <div className="brand">
-            <span className="dot" />
-            Predykcja bankructwa
-          </div>
-          <div className="nav-links">
-            <a href="#wykrywacz">Wykrywacz</a>
-            <a href="#modele">Modele</a>
-            <a href="#koszt">Koszty</a>
-            <a className="gh" href="https://github.com/Plonkawojciech/projekt-ml-bankructwa" target="_blank" rel="noreferrer">
-              GitHub ↗
-            </a>
-          </div>
+      {/* TOP BAR */}
+      <div className="topbar">
+        <div className="topbar-inner">
+          <span className="name">Przewidywanie bankructwa firm</span>
+          <a href={REPO} target="_blank" rel="noreferrer">
+            Kod na GitHub ↗
+          </a>
         </div>
-      </nav>
+      </div>
 
-      {/* HERO */}
-      <header className="hero">
-        <div className="hero-inner">
-          <h1>
-            Predykcja <span className="grad">bankructwa</span> polskich firm
-          </h1>
+      {/* INTRO */}
+      <header className="intro">
+        <div className="wrap">
+          <p className="label">Projekt — uczenie maszynowe</p>
+          <h1>Przewidywanie bankructwa polskich firm</h1>
           <p className="lead">
-            Model uczenia maszynowego przewidujący bankructwo polskich firm na podstawie 64 wskaźników
-            finansowych. Porównanie czterech modeli, wyjaśnialność i analiza kosztowa — w jednym miejscu.
+            Analiza danych finansowych 43 405 spółek i porównanie czterech modeli klasyfikacyjnych, które na
+            podstawie 64 wskaźników przewidują, czy firmie grozi bankructwo.
           </p>
-          <div className="stats">
-            <div className="stat">
-              <div className="num">{fmtInt(model.dane.firmy)}</div>
-              <div className="lab">analizowanych firm</div>
+          <div className="facts">
+            <div className="f">
+              <b>{fmtInt(model.dane.firmy)}</b>
+              <span>analizowanych firm</span>
             </div>
-            <div className="stat">
-              <div className="num">{model.dane.procent_bankrutow}%</div>
-              <div className="lab">to bankruci</div>
+            <div className="f">
+              <b>{model.dane.procent_bankrutow}%</b>
+              <span>to bankruci</span>
             </div>
-            <div className="stat">
-              <div className="num">{model.dane.liczba_cech}</div>
-              <div className="lab">wskaźników finansowych</div>
+            <div className="f">
+              <b>{model.dane.liczba_cech}</b>
+              <span>wskaźników</span>
             </div>
-            <div className="stat">
-              <div className="num">{model.modele[model.najlepszy].roc_auc.toFixed(2)}</div>
-              <div className="lab">AUC najlepszego modelu</div>
+            <div className="f">
+              <b>4</b>
+              <span>modele ML</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* WYKRYWACZ */}
-      <section id="wykrywacz">
+      {/* 01 DANE */}
+      <section>
         <div className="wrap">
-          <p className="kicker">Interaktywny wykrywacz</p>
-          <h2>Sprawdź ryzyko firmy</h2>
+          <div className="sec-head">
+            <span className="sec-num">01</span>
+            <h2>Dane</h2>
+          </div>
+          <p className="sub">
+            Zbiór <em>Polish Companies Bankruptcy Data</em> z repozytorium UCI — zanonimizowane sprawozdania
+            finansowe polskich firm. Każdy rekord to 64 wskaźniki (rentowność, zadłużenie, płynność) oraz
+            informacja, czy firma zbankrutowała. Zbiór jest silnie <strong>niezbalansowany</strong>: bankruci
+            stanowią zaledwie {model.dane.procent_bankrutow}% — co bezpośrednio wpływa na dobór i ocenę modeli.
+          </p>
+        </div>
+      </section>
+
+      {/* 02 MODELE */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">02</span>
+            <h2>Modele i wyniki</h2>
+          </div>
+          <p className="sub">
+            Każdy model trenowano na 80% danych i testowano na pozostałych 20%. Przy ~5% bankrutów sama
+            trafność (accuracy) myli — kluczowa jest <strong>czułość</strong> (ilu realnych bankrutów model
+            wyłapuje) oraz <strong>precyzja</strong>.
+          </p>
+
+          <div className="card tablecard">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  {NAZWY_METRYK.map(([, label]) => (
+                    <th key={label}>{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(model.modele).map(([nazwa, m]) => (
+                  <tr key={nazwa} className={nazwa === model.najlepszy ? "best" : ""}>
+                    <td>
+                      {nazwa}
+                      {nazwa === model.najlepszy && <span className="pill">najlepszy F1</span>}
+                    </td>
+                    {NAZWY_METRYK.map(([k]) => (
+                      <td key={k}>{m[k].toFixed(3)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="figure">
+            <img src="/porownanie_modeli.png" alt="Porównanie metryk modeli" />
+            <p className="figcap">
+              Porównanie metryk dla klasy „bankrut”. Random Forest daje najlepszy balans, Gradient Boosting
+              wyłapuje najwięcej bankrutów (najwyższa czułość).
+            </p>
+          </div>
+
+          <div className="figure">
+            <img src="/macierze_pomylek.png" alt="Macierze pomyłek modeli" />
+            <p className="figcap">
+              Macierze pomyłek. Widać, dlaczego KNN zawodzi przy niezbalansowanych danych — niemal nie
+              wykrywa bankrutów, mimo wysokiej ogólnej trafności.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 03 CO DECYDUJE */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">03</span>
+            <h2>Co decyduje o bankructwie</h2>
+          </div>
+          <p className="sub">
+            Random Forest ocenia, które wskaźniki najsilniej wpływają na predykcję. Dominują miary zadłużenia,
+            rentowności i zdolności do obsługi zobowiązań.
+          </p>
+          <div className="figure">
+            <img src="/waznosc_cech.png" alt="Ważność wskaźników finansowych" />
+            <p className="figcap">Najważniejsze wskaźniki według modelu Random Forest.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 04 DEMO */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">04</span>
+            <h2>Wypróbuj model</h2>
+          </div>
           <p className="sub">
             Ustaw osiem najważniejszych wskaźników, a model (Gradient Boosting, liczony w przeglądarce) na
-            żywo oszacuje prawdopodobieństwo bankructwa. Skorzystaj z gotowych profili, by zobaczyć kontrast.
+            żywo oszacuje prawdopodobieństwo bankructwa. Gotowe profile pokazują kontrast między firmami.
           </p>
 
           <div className="predictor">
@@ -218,86 +304,17 @@ export default function Strona() {
         </div>
       </section>
 
-      {/* MODELE */}
-      <section id="modele">
+      {/* 05 KOSZT */}
+      <section>
         <div className="wrap">
-          <p className="kicker">Wyniki</p>
-          <h2>Porównanie czterech modeli</h2>
+          <div className="sec-head">
+            <span className="sec-num">05</span>
+            <h2>Analiza kosztowa</h2>
+          </div>
           <p className="sub">
-            Każdy model trenowano na 80% danych i testowano na pozostałych 20%. Przy ~5% bankrutów sama
-            trafność (accuracy) myli — kluczowa jest <strong>czułość</strong> (ilu realnych bankrutów model
-            wyłapuje) oraz <strong>precyzja</strong>.
-          </p>
-
-          <div className="card tablecard">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  {NAZWY_METRYK.map(([, label]) => (
-                    <th key={label}>{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(model.modele).map(([nazwa, m]) => (
-                  <tr key={nazwa} className={nazwa === model.najlepszy ? "best" : ""}>
-                    <td>
-                      {nazwa}
-                      {nazwa === model.najlepszy && <span className="pill">najlepszy F1</span>}
-                    </td>
-                    {NAZWY_METRYK.map(([k]) => (
-                      <td key={k}>{m[k].toFixed(3)}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="figure">
-            <img src="/porownanie_modeli.png" alt="Porównanie metryk modeli" />
-            <p className="figcap">
-              Porównanie metryk dla klasy „bankrut”. Random Forest daje najlepszy balans, Gradient Boosting
-              wyłapuje najwięcej bankrutów (najwyższa czułość).
-            </p>
-          </div>
-
-          <div className="figure">
-            <img src="/macierze_pomylek.png" alt="Macierze pomyłek modeli" />
-            <p className="figcap">
-              Macierze pomyłek. Widać, dlaczego KNN zawodzi przy niezbalansowanych danych — niemal nie
-              wykrywa bankrutów, mimo wysokiej ogólnej trafności.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CECHY */}
-      <section id="cechy">
-        <div className="wrap">
-          <p className="kicker">Wyjaśnialność</p>
-          <h2>Co decyduje o bankructwie</h2>
-          <p className="sub">
-            Random Forest ocenia, które wskaźniki najsilniej wpływają na predykcję. Dominują miary
-            zadłużenia, rentowności i zdolności do obsługi zobowiązań.
-          </p>
-          <div className="figure">
-            <img src="/waznosc_cech.png" alt="Ważność wskaźników finansowych" />
-            <p className="figcap">Najważniejsze wskaźniki według modelu Random Forest.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* KOSZT */}
-      <section id="koszt">
-        <div className="wrap">
-          <p className="kicker">Analiza biznesowa</p>
-          <h2>Scenariusz kosztowy</h2>
-          <p className="sub">
-            Nie każdy błąd kosztuje tyle samo. Przeoczony bankrut (udzielony kredyt firmie, która upadnie)
-            jest zwykle znacznie droższy niż fałszywy alarm. Ustaw koszty i zobacz, który model jest
-            najtańszy dla instytucji finansowej — to często <em>nie</em> ten o najwyższej trafności.
+            Nie każdy błąd kosztuje tyle samo. Przeoczony bankrut (kredyt dla firmy, która upadnie) jest
+            zwykle dużo droższy niż fałszywy alarm. Ustaw koszty i zobacz, który model jest najtańszy — to
+            często <em>nie</em> ten o najwyższej trafności.
           </p>
 
           <div className="card">
@@ -334,7 +351,7 @@ export default function Strona() {
               </div>
             </div>
 
-            <div className="tablecard" style={{ padding: 0 }}>
+            <div className="tablecard">
               <table className="table">
                 <thead>
                   <tr>
@@ -363,22 +380,48 @@ export default function Strona() {
         </div>
       </section>
 
+      {/* 06 WNIOSKI */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">06</span>
+            <h2>Wnioski</h2>
+          </div>
+          <ul className="wnioski">
+            <li>
+              <b>Trafność (accuracy) myli</b> przy ~5% bankrutów — KNN osiąga 95% trafności, wykrywając
+              praktycznie zero bankrutów.
+            </li>
+            <li>
+              <b>Równoważenie klas jest kluczowe</b> — dopiero modele uczone z wagami klas zaczynają wykrywać
+              bankrutów.
+            </li>
+            <li>
+              <b>Nie ma jednego „najlepszego” modelu</b> — Random Forest daje najlepszy balans (F1, AUC),
+              a Gradient Boosting wyłapuje najwięcej bankrutów.
+            </li>
+            <li>
+              <b>Analiza kosztowa zmienia ranking</b> — gdy przeoczony bankrut jest drogi, najtańszy okazuje
+              się model o najwyższej czułości, a nie o najwyższej trafności.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer>
         <div className="wrap">
-          Model uczenia maszynowego przewidujący bankructwo firm na podstawie 64 wskaźników finansowych.
-          <br />
           Dane:{" "}
           <a href="https://archive.ics.uci.edu/dataset/365/polish+companies+bankruptcy+data" target="_blank" rel="noreferrer">
             Polish Companies Bankruptcy Data (UCI)
           </a>{" "}
           · Kod:{" "}
-          <a href="https://github.com/Plonkawojciech/projekt-ml-bankructwa" target="_blank" rel="noreferrer">
+          <a href={REPO} target="_blank" rel="noreferrer">
             GitHub
           </a>
           <div className="disclaimer">
             Narzędzie demonstracyjne i edukacyjne. Predykcje opierają się na danych historycznych
-            zanonimizowanych spółek i nie stanowią porady finansowej ani oceny zdolności kredytowej.
+            zanonimizowanych spółek i nie stanowią porady finansowej.
           </div>
         </div>
       </footer>

@@ -275,6 +275,62 @@ input[type="range"]::-moz-range-thumb {
   margin: 0 0 18px;
   text-align: center;
 }
+
+/* static examples */
+.examples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 580px) {
+  .examples {
+    grid-template-columns: 1fr;
+  }
+}
+.excard {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  background: var(--bg);
+}
+.exname {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.expct {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.extag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+  padding: 4px 13px;
+  border-radius: 999px;
+  margin-top: 14px;
+}
+.exbar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  margin-top: 20px;
+  overflow: hidden;
+}
+.exbar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s;
+}
 .gauge-wrap {
   position: relative;
   width: 220px;

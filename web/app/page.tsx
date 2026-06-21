@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ModelData, prawdopodobienstwo } from "@/lib/predict";
 
 const fmtPct = (x: number) => (x * 100).toFixed(1) + "%";
@@ -19,34 +19,28 @@ const NAZWY_METRYK: [keyof ModelData["modele"][string], string][] = [
 
 export default function Strona() {
   const [model, setModel] = useState<ModelData | null>(null);
-  const [wartosci, setWartosci] = useState<Record<string, number>>({});
   const [kosztFN, setKosztFN] = useState("200000");
   const [kosztFP, setKosztFP] = useState("5000");
 
   useEffect(() => {
     fetch("/model.json")
       .then((r) => r.json())
-      .then((m: ModelData) => {
-        setModel(m);
-        setWartosci({ ...m.mediany_all });
-      });
+      .then((m: ModelData) => setModel(m));
   }, []);
-
-  const prob = useMemo(() => (model ? prawdopodobienstwo(model, wartosci) : 0), [model, wartosci]);
 
   if (!model) return <div className="loading">Ładowanie modelu…</div>;
 
-  const ustaw = (key: string, v: number) => setWartosci((w) => ({ ...w, [key]: v }));
-  const preset = (p: Record<string, number>) => setWartosci({ ...p });
-
-  const band =
-    prob < 0.06
+  const bandFor = (p: number) =>
+    p < 0.06
       ? { kolor: "var(--green)", txt: "Niskie ryzyko" }
-      : prob < 0.15
+      : p < 0.15
       ? { kolor: "var(--amber)", txt: "Podwyższone ryzyko" }
       : { kolor: "var(--red)", txt: "Wysokie ryzyko" };
 
-  const frac = Math.min(1, prob / 0.4);
+  const przyklady = [
+    { nazwa: "Typowa zdrowa firma", p: prawdopodobienstwo(model, model.presety.zdrowa) },
+    { nazwa: "Firma zagrożona", p: prawdopodobienstwo(model, model.presety.bankrut) },
+  ];
 
   const fnNum = Number(kosztFN) || 0;
   const fpNum = Number(kosztFP) || 0;
@@ -196,73 +190,37 @@ export default function Strona() {
         <div className="wrap">
           <div className="sec-head">
             <span className="sec-num">04</span>
-            <h2>Wypróbuj model</h2>
+            <h2>Model w działaniu</h2>
           </div>
           <p className="sub">
-            Wybierz gotowy profil firmy albo dostosuj kilka wskaźników — model (Gradient Boosting, liczony
-            w przeglądarce) na żywo oszacuje prawdopodobieństwo bankructwa.
+            Tak model (Gradient Boosting) ocenia dwa typowe profile firm na podstawie ich wskaźników
+            finansowych — gotowe prawdopodobieństwo bankructwa dla każdego z nich.
           </p>
 
-          <div className="demo card">
-            <div className="gauge-wrap">
-              <svg className="gauge" viewBox="0 0 230 126" role="img" aria-label={`Ryzyko ${fmtPct(prob)}`}>
-                <path className="gauge-bg" d="M15 116 A100 100 0 0 1 215 116" pathLength={100} />
-                <path
-                  className="gauge-fill"
-                  d="M15 116 A100 100 0 0 1 215 116"
-                  pathLength={100}
-                  style={{ stroke: band.kolor, strokeDasharray: `${frac * 100} 100` }}
-                />
-              </svg>
-              <div className="gauge-center">
-                <div className="bigpct" style={{ color: band.kolor }}>
-                  {fmtPct(prob)}
-                </div>
-                <div className="tag" style={{ background: band.kolor, color: "#fff" }}>
-                  {band.txt}
-                </div>
-              </div>
-            </div>
-            <p className="baserate">prawdopodobieństwo bankructwa · bazowo w zbiorze ~5%</p>
-
-            <div className="presets">
-              <button className="btn" onClick={() => preset(model.presety.zdrowa)}>
-                Zdrowa firma
-              </button>
-              <button className="btn" onClick={() => preset(model.presety.bankrut)}>
-                Typowy bankrut
-              </button>
-              <button className="btn" onClick={() => preset(model.mediany_all)}>
-                Reset
-              </button>
-            </div>
-
-            <div className="tweak">
-              <h4>lub dostosuj wskaźniki ręcznie</h4>
-              {model.cechy_glowne.slice(0, 5).map((c) => {
-                const v = wartosci[c.key] ?? c.median;
-                const step = (c.p95 - c.p05) / 100 || 0.01;
-                return (
-                  <div className="row" key={c.key}>
-                    <div className="slabel">
-                      <span className="name">{c.label}</span>
-                      <span className="val">{v.toFixed(2)}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={c.p05}
-                      max={c.p95}
-                      step={step}
-                      value={v}
-                      aria-label={c.label}
-                      aria-valuetext={v.toFixed(2)}
-                      onChange={(e) => ustaw(c.key, parseFloat(e.target.value))}
-                    />
+          <div className="examples">
+            {przyklady.map((ex) => {
+              const b = bandFor(ex.p);
+              const frac = Math.min(1, ex.p / 0.4);
+              return (
+                <div className="excard" key={ex.nazwa}>
+                  <div className="exname">{ex.nazwa}</div>
+                  <div className="expct" style={{ color: b.kolor }}>
+                    {fmtPct(ex.p)}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="extag" style={{ background: b.kolor }}>
+                    {b.txt}
+                  </div>
+                  <div className="exbar">
+                    <div className="exbar-fill" style={{ width: `${frac * 100}%`, background: b.kolor }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          <p className="figcap" style={{ textAlign: "center" }}>
+            Firmie zagrożonej model przypisuje kilkukrotnie wyższe ryzyko niż zdrowej (bazowa częstość
+            bankructw w zbiorze: ~5%).
+          </p>
         </div>
       </section>
 

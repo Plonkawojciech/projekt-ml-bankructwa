@@ -9,12 +9,15 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 venv/
+.mlenv/
 
 # Node / Next.js
 web/node_modules/
 web/.next/
 web/out/
 web/.vercel/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
 *.log
 .DS_Store
 

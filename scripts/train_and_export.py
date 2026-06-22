@@ -223,13 +223,16 @@ plt.title('Porównanie modeli (klasa: bankrut)')
 plt.ylabel('wartość metryki'); plt.xticks(rotation=15); plt.ylim(0, 1); plt.legend(loc='lower right')
 plt.tight_layout(); plt.savefig(ART / 'porownanie_modeli.png', dpi=130); plt.close()
 
-# 5b. macierze pomyłek
-fig, axes = plt.subplots(1, 4, figsize=(18, 4))
-for ax, (nazwa, w) in zip(axes, wyniki.items()):
-    sns.heatmap(w['cm'], annot=True, fmt='d', cmap='Blues', ax=ax,
+# 5b. macierze pomyłek (układ 2x2, duże cyfry — czytelne na stronie)
+fig, axes = plt.subplots(2, 2, figsize=(11, 9.5))
+for ax, (nazwa, w) in zip(axes.flat, wyniki.items()):
+    sns.heatmap(w['cm'], annot=True, fmt='d', cmap='Blues', ax=ax, cbar=False,
+                annot_kws={'size': 22, 'weight': 'bold'}, linewidths=1, linecolor='white',
                 xticklabels=['zdrowa', 'bankrut'], yticklabels=['zdrowa', 'bankrut'])
-    ax.set_title(nazwa); ax.set_xlabel('predykcja'); ax.set_ylabel('prawda')
-plt.tight_layout(); plt.savefig(ART / 'macierze_pomylek.png', dpi=130); plt.close()
+    ax.set_title(nazwa, fontsize=15, fontweight='bold', pad=10)
+    ax.set_xlabel('predykcja modelu', fontsize=11); ax.set_ylabel('prawda', fontsize=11)
+    ax.tick_params(labelsize=11)
+plt.tight_layout(pad=2.0); plt.savefig(ART / 'macierze_pomylek.png', dpi=140); plt.close()
 
 # 5c. ważność cech
 plt.figure(figsize=(9, 5))
@@ -238,11 +241,71 @@ etyk12 = [f'{k} — {OPIS.get(k, k)[:28]}' for k in top12.index]
 sns.barplot(x=top12.values, y=etyk12, hue=etyk12, palette='viridis', legend=False)
 plt.title('Najważniejsze wskaźniki — model Random Forest'); plt.xlabel('ważność'); plt.ylabel('')
 plt.tight_layout(); plt.savefig(ART / 'waznosc_cech.png', dpi=130); plt.close()
+
+# 5d. rozkład klas (zdrowe vs bankruci)
+plt.figure(figsize=(6, 4))
+ax = sns.countplot(x='class', data=df, hue='class', palette=['#15a34a', '#dc2626'], legend=False)
+plt.title('Liczba firm: zdrowe vs bankruci')
+plt.xticks([0, 1], ['Zdrowa', 'Bankrut']); plt.xlabel(''); plt.ylabel('Liczba firm')
+for p in ax.patches:
+    ax.annotate(int(p.get_height()), (p.get_x() + p.get_width() / 2, p.get_height()), ha='center', va='bottom')
+plt.tight_layout(); plt.savefig(ART / 'rozklad_klas.png', dpi=130); plt.close()
+
+# 5e. profil finansowy (boxploty zdrowa vs bankrut)
+wsk = {'Attr2': 'Zadłużenie', 'Attr1': 'Rentowność', 'Attr16': 'Spłata zobowiązań', 'Attr10': 'Kapitał własny / aktywa'}
+fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+for ax, (k, t) in zip(axes, wsk.items()):
+    d = df[(df[k] > df[k].quantile(0.05)) & (df[k] < df[k].quantile(0.95))]
+    sns.boxplot(x='class', y=k, data=d, ax=ax, hue='class', palette=['#15a34a', '#dc2626'], legend=False)
+    ax.set_title(t); ax.set_xlabel(''); ax.set_ylabel(''); ax.set_xticks([0, 1]); ax.set_xticklabels(['Zdrowa', 'Bankrut'])
+fig.suptitle('Profil finansowy: zdrowa firma vs bankrut', fontsize=14)
+plt.tight_layout(); plt.savefig(ART / 'profil_firm.png', dpi=130); plt.close()
+
+# 5f. wskaźniki najsilniej powiązane z bankructwem
+kor = df[CECHY + ['class']].corr()['class'].drop('class')
+topk = kor[kor.abs().sort_values(ascending=False).head(10).index]
+etyk_k = [f'{k} — {OPIS.get(k, k)[:30]}' for k in topk.index]
+kolory_k = ['#dc2626' if v > 0 else '#15a34a' for v in topk.values]
+plt.figure(figsize=(9, 5))
+sns.barplot(x=topk.values, y=etyk_k, hue=etyk_k, palette=kolory_k, legend=False)
+plt.axvline(0, color='black', lw=0.8)
+plt.title('Wskaźniki najsilniej powiązane z bankructwem')
+plt.xlabel('korelacja (czerwony = zwiększa ryzyko)'); plt.ylabel('')
+plt.tight_layout(); plt.savefig(ART / 'korelacje.png', dpi=130); plt.close()
+
+# 5f-bis. SIATKA ATRYBUTÓW — duża, czytelna mapa korelacji z ludzkimi nazwami
+SIATKA = {
+    'Attr1': 'Rentowność', 'Attr2': 'Zadłużenie', 'Attr3': 'Kapitał obrotowy',
+    'Attr6': 'Zyski zatrzymane', 'Attr7': 'EBIT / aktywa', 'Attr10': 'Kapitał własny',
+    'Attr16': 'Spłata zobowiązań', 'Attr46': 'Płynność', 'class': 'BANKRUCTWO',
+}
+sub = df[list(SIATKA)].corr()
+sub.index = list(SIATKA.values()); sub.columns = list(SIATKA.values())
+plt.figure(figsize=(10, 8.5))
+sns.heatmap(sub, annot=True, fmt='.2f', cmap='coolwarm', center=0, square=True,
+            annot_kws={'size': 12, 'weight': 'bold'}, linewidths=1.2, linecolor='white',
+            cbar_kws={'shrink': 0.7, 'label': 'siła powiązania'})
+plt.title('Siatka korelacji wskaźników finansowych', fontsize=15, fontweight='bold', pad=14)
+plt.xticks(rotation=40, ha='right', fontsize=11); plt.yticks(rotation=0, fontsize=11)
+plt.tight_layout(); plt.savefig(ART / 'siatka_atrybutow.png', dpi=140); plt.close()
+
+# 5g. SHAP — wpływ wskaźników na predykcję
+import shap
+proba_n = min(800, len(X_test))
+idx_shap = np.random.RandomState(RNG).choice(len(X_test), proba_n, replace=False)
+probka = pd.DataFrame(X_test[idx_shap], columns=[OPIS.get(c, c)[:24] for c in CECHY])
+sv = shap.TreeExplainer(rf)(probka).values
+if sv.ndim == 3:
+    sv = sv[:, :, 1]
+plt.figure()
+shap.summary_plot(sv, probka, max_display=12, show=False)
+plt.tight_layout(); plt.savefig(ART / 'shap.png', dpi=130, bbox_inches='tight'); plt.close()
 print('   zapisano wykresy PNG do artefakty/')
 
 # kopia wykresów dla strony
 import shutil
-for png in ['porownanie_modeli.png', 'macierze_pomylek.png', 'waznosc_cech.png']:
+for png in ['porownanie_modeli.png', 'macierze_pomylek.png', 'waznosc_cech.png',
+            'rozklad_klas.png', 'profil_firm.png', 'korelacje.png', 'shap.png', 'siatka_atrybutow.png']:
     shutil.copy(ART / png, WEBPUB / png)
 
 print('\n== GOTOWE ==')

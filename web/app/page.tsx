@@ -4,6 +4,39 @@ import { useEffect, useState } from "react";
 import { ModelData, prawdopodobienstwo } from "@/lib/predict";
 import { VizKNN, VizTree, VizForest, VizBoosting } from "./ModelViz";
 
+const fmtPct = (x: number) => (x * 100).toFixed(1) + "%";
+const fmtInt = (x: number) => x.toLocaleString("pl-PL");
+const fmtZl = (x: number) => x.toLocaleString("pl-PL") + " zł";
+
+const REPO = "https://github.com/Plonkawojciech/projekt-ml-bankructwa";
+
+const NAZWY_METRYK: [keyof ModelData["modele"][string], string][] = [
+  ["recall", "Czułość"],
+  ["precision", "Precyzja"],
+  ["f1", "F1"],
+  ["roc_auc", "AUC"],
+  ["accuracy", "Trafność"],
+];
+
+const KATEGORIE = [
+  {
+    nazwa: "Rentowność",
+    opis: "Czy firma zarabia. Np. zysk netto / aktywa, EBIT / aktywa, marża na sprzedaży.",
+  },
+  {
+    nazwa: "Zadłużenie",
+    opis: "Jak bardzo firma jest zadłużona. Np. zobowiązania / aktywa, kapitał własny / zobowiązania.",
+  },
+  {
+    nazwa: "Płynność",
+    opis: "Czy firma ma czym płacić bieżące rachunki. Np. aktywa obrotowe / zobowiązania krótkoterminowe.",
+  },
+  {
+    nazwa: "Sprawność operacyjna",
+    opis: "Jak szybko firma obraca zapasami i należnościami. Np. rotacja zapasów i należności w dniach.",
+  },
+];
+
 const JAK_DZIALAJA = [
   {
     tab: "KNN",
@@ -55,20 +88,6 @@ const JAK_DZIALAJA = [
   },
 ];
 
-const fmtPct = (x: number) => (x * 100).toFixed(1) + "%";
-const fmtInt = (x: number) => x.toLocaleString("pl-PL");
-const fmtZl = (x: number) => x.toLocaleString("pl-PL") + " zł";
-
-const REPO = "https://github.com/Plonkawojciech/projekt-ml-bankructwa";
-
-const NAZWY_METRYK: [keyof ModelData["modele"][string], string][] = [
-  ["recall", "Czułość"],
-  ["precision", "Precyzja"],
-  ["f1", "F1"],
-  ["roc_auc", "AUC"],
-  ["accuracy", "Trafność"],
-];
-
 export default function Strona() {
   const [model, setModel] = useState<ModelData | null>(null);
   const [kosztFN, setKosztFN] = useState("200000");
@@ -104,6 +123,9 @@ export default function Strona() {
     koszt: cm[1][0] * fnNum + cm[0][1] * fpNum,
   }));
   const minKoszt = Math.min(...koszty.map((k) => k.koszt));
+
+  const aktywny = JAK_DZIALAJA[wybranyModel];
+  const VizAktywny = aktywny.Viz;
 
   return (
     <main>
@@ -152,22 +174,99 @@ export default function Strona() {
         <div className="wrap">
           <div className="sec-head">
             <span className="sec-num">01</span>
-            <h2>Dane</h2>
+            <h2>Dane i wskaźniki</h2>
           </div>
           <p className="sub">
             Zbiór <em>Polish Companies Bankruptcy Data</em> z repozytorium UCI — zanonimizowane sprawozdania
-            finansowe polskich firm. Każdy rekord to 64 wskaźniki (rentowność, zadłużenie, płynność) oraz
-            informacja, czy firma zbankrutowała. Zbiór jest silnie <strong>niezbalansowany</strong>: bankruci
-            stanowią zaledwie {model.dane.procent_bankrutow}% — co bezpośrednio wpływa na dobór i ocenę modeli.
+            finansowe polskich firm. Każdy rekord to 64 wskaźniki finansowe oraz informacja, czy firma
+            zbankrutowała. Wszystkie wskaźniki należą do czterech głównych grup:
           </p>
+
+          <div className="katgrid">
+            {KATEGORIE.map((k) => (
+              <div className="katcard" key={k.nazwa}>
+                <h3>{k.nazwa}</h3>
+                <p>{k.opis}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="figure">
+            <img src="/siatka_atrybutow.png" alt="Siatka korelacji wskaźników finansowych" />
+            <p className="figcap">
+              <strong>Siatka korelacji wskaźników.</strong> Pokazuje, jak wskaźniki łączą się ze sobą i z
+              bankructwem. Czerwony = rosną razem, niebieski = rosną przeciwnie. Ostatni wiersz/kolumna
+              (BANKRUCTWO) mówi, które wskaźniki najsilniej wiążą się z upadkiem — najwyraźniej zadłużenie
+              (dodatnio) oraz rentowność i kapitał własny (ujemnie).
+            </p>
+          </div>
+
+          <div className="figure">
+            <img src="/rozklad_klas.png" alt="Liczba firm zdrowych i bankrutów" />
+            <p className="figcap">
+              Zbiór jest silnie <strong>niezbalansowany</strong> — bankruci to zaledwie{" "}
+              {model.dane.procent_bankrutow}% firm. To kluczowe dla doboru i oceny modeli.
+            </p>
+          </div>
+
+          <div className="figure">
+            <img src="/profil_firm.png" alt="Profil finansowy zdrowej firmy i bankruta" />
+            <p className="figcap">
+              Profil finansowy zdrowej firmy vs bankruta. Widać, że bankruci są bardziej zadłużeni i mniej
+              rentowni — w danych jest realny sygnał, który model może wychwycić.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 02 MODELE */}
+      {/* 02 JAK DZIAŁAJĄ MODELE */}
       <section>
         <div className="wrap">
           <div className="sec-head">
             <span className="sec-num">02</span>
+            <h2>Jak działają modele</h2>
+          </div>
+          <p className="sub">
+            Cztery modele klasyfikują firmę na różne sposoby. Kliknij model, aby zobaczyć jego schemat
+            w powiększeniu i prześledzić, jak podejmuje decyzję.
+          </p>
+
+          <div className="modeltabs">
+            {JAK_DZIALAJA.map((m, i) => (
+              <button
+                key={m.tab}
+                className={`modeltab ${i === wybranyModel ? "active" : ""}`}
+                onClick={() => setWybranyModel(i)}
+                aria-pressed={i === wybranyModel}
+              >
+                {m.tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="modelstage card" key={wybranyModel}>
+            <div className="stageviz">
+              <VizAktywny />
+            </div>
+            <div className="stageinfo">
+              <h3>{aktywny.nazwa}</h3>
+              <p className="stageopis">{aktywny.opis}</p>
+              <ol className="kroki">
+                {aktywny.kroki.map((k, j) => (
+                  <li key={j}>{k}</li>
+                ))}
+              </ol>
+              <div className="resultnote">{aktywny.wynik}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 03 MODELE I WYNIKI */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">03</span>
             <h2>Modele i wyniki</h2>
           </div>
           <p className="sub">
@@ -213,36 +312,49 @@ export default function Strona() {
           <div className="figure">
             <img src="/macierze_pomylek.png" alt="Macierze pomyłek modeli" />
             <p className="figcap">
-              Macierze pomyłek. Widać, dlaczego KNN zawodzi przy niezbalansowanych danych — niemal nie
-              wykrywa bankrutów, mimo wysokiej ogólnej trafności.
+              Macierze pomyłek — rozkład trafień i błędów. Najgroźniejsze pole to lewy-dół (bankrut uznany za
+              zdrową firmę). KNN niemal nie wykrywa bankrutów, mimo wysokiej trafności.
             </p>
           </div>
         </div>
       </section>
 
-      {/* 03 CO DECYDUJE */}
-      <section>
-        <div className="wrap">
-          <div className="sec-head">
-            <span className="sec-num">03</span>
-            <h2>Co decyduje o bankructwie</h2>
-          </div>
-          <p className="sub">
-            Random Forest ocenia, które wskaźniki najsilniej wpływają na predykcję. Dominują miary zadłużenia,
-            rentowności i zdolności do obsługi zobowiązań.
-          </p>
-          <div className="figure">
-            <img src="/waznosc_cech.png" alt="Ważność wskaźników finansowych" />
-            <p className="figcap">Najważniejsze wskaźniki według modelu Random Forest.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* 04 DEMO */}
+      {/* 04 CO DECYDUJE + SHAP */}
       <section>
         <div className="wrap">
           <div className="sec-head">
             <span className="sec-num">04</span>
+            <h2>Co decyduje o bankructwie</h2>
+          </div>
+          <p className="sub">
+            Dwie warstwy wyjaśnialności: ranking ważności mówi, <em>które</em> wskaźniki się liczą, a SHAP
+            pokazuje dodatkowo, <em>w którą stronę</em> każdy z nich działa.
+          </p>
+
+          <div className="figure">
+            <img src="/waznosc_cech.png" alt="Ważność wskaźników finansowych" />
+            <p className="figcap">
+              Ważność wskaźników według Random Forest — które cechy model bierze najmocniej pod uwagę.
+            </p>
+          </div>
+
+          <div className="figure">
+            <img src="/shap.png" alt="Wykres SHAP" />
+            <p className="figcap">
+              <strong>Jak czytać wykres SHAP:</strong> każda kropka to jedna firma. Im bardziej w prawo, tym
+              mocniej dany wskaźnik popycha decyzję w stronę bankructwa; w lewo — w stronę przetrwania. Kolor
+              to wartość wskaźnika (czerwony = wysoka, niebieski = niska). Wskaźniki ułożone są od
+              najważniejszego. Dzięki temu widać nie tylko które wskaźniki się liczą, ale i w którą stronę działają.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 05 MODEL W DZIAŁANIU */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">05</span>
             <h2>Model w działaniu</h2>
           </div>
           <p className="sub">
@@ -277,11 +389,11 @@ export default function Strona() {
         </div>
       </section>
 
-      {/* 05 KOSZT */}
+      {/* 06 ANALIZA KOSZTOWA */}
       <section>
         <div className="wrap">
           <div className="sec-head">
-            <span className="sec-num">05</span>
+            <span className="sec-num">06</span>
             <h2>Analiza kosztowa</h2>
           </div>
           <p className="sub">
@@ -353,11 +465,11 @@ export default function Strona() {
         </div>
       </section>
 
-      {/* 06 WNIOSKI */}
+      {/* 07 WNIOSKI */}
       <section>
         <div className="wrap">
           <div className="sec-head">
-            <span className="sec-num">06</span>
+            <span className="sec-num">07</span>
             <h2>Wnioski</h2>
           </div>
           <ul className="wnioski">
@@ -378,55 +490,6 @@ export default function Strona() {
               się model o najwyższej czułości, a nie o najwyższej trafności.
             </li>
           </ul>
-        </div>
-      </section>
-
-      {/* 07 JAK DZIAŁAJĄ MODELE */}
-      <section>
-        <div className="wrap">
-          <div className="sec-head">
-            <span className="sec-num">07</span>
-            <h2>Jak działają modele</h2>
-          </div>
-          <p className="sub">
-            Cztery modele klasyfikują firmę na różne sposoby. Kliknij model, aby zobaczyć jego schemat
-            w powiększeniu i prześledzić, jak podejmuje decyzję.
-          </p>
-
-          <div className="modeltabs">
-            {JAK_DZIALAJA.map((m, i) => (
-              <button
-                key={m.tab}
-                className={`modeltab ${i === wybranyModel ? "active" : ""}`}
-                onClick={() => setWybranyModel(i)}
-                aria-pressed={i === wybranyModel}
-              >
-                {m.tab}
-              </button>
-            ))}
-          </div>
-
-          {(() => {
-            const m = JAK_DZIALAJA[wybranyModel];
-            const Viz = m.Viz;
-            return (
-              <div className="modelstage card" key={wybranyModel}>
-                <div className="stageviz">
-                  <Viz />
-                </div>
-                <div className="stageinfo">
-                  <h3>{m.nazwa}</h3>
-                  <p className="stageopis">{m.opis}</p>
-                  <ol className="kroki">
-                    {m.kroki.map((k, j) => (
-                      <li key={j}>{k}</li>
-                    ))}
-                  </ol>
-                  <div className="resultnote">{m.wynik}</div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
       </section>
 

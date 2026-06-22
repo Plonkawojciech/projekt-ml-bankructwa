@@ -536,6 +536,37 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 5px;
 }
 
+/* ---------- kategorie wskaźników ---------- */
+.katgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 30px;
+}
+@media (max-width: 600px) {
+  .katgrid {
+    grid-template-columns: 1fr;
+  }
+}
+.katcard {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 16px 18px;
+  background: var(--bg);
+}
+.katcard h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 5px;
+}
+.katcard p {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* ---------- jak działają modele (interaktywne) ---------- */
 .modeltabs {
   display: flex;

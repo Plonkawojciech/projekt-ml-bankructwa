@@ -6,23 +6,51 @@ import { VizKNN, VizTree, VizForest, VizBoosting } from "./ModelViz";
 
 const JAK_DZIALAJA = [
   {
+    tab: "KNN",
     nazwa: "K-Nearest Neighbors (KNN)",
-    opis: "Szuka najbardziej podobnych firm w danych i sprawdza, ile z nich zbankrutowało — większość sąsiadów decyduje o werdykcie.",
+    opis: "Najprostszy model. Nie buduje reguł — zapamiętuje dane i porównuje nową firmę do tych najbardziej podobnych.",
+    kroki: [
+      "Liczy podobieństwo nowej firmy do wszystkich w zbiorze",
+      "Wybiera 15 najbardziej podobnych (sąsiadów)",
+      "Sprawdza, ile z nich zbankrutowało — większość decyduje",
+    ],
+    wynik: "U nas zawiódł: przy 5% bankrutów wśród sąsiadów przeważają zdrowe firmy, więc prawie nigdy nie wykrywa bankruta.",
     Viz: VizKNN,
   },
   {
+    tab: "Decision Tree",
     nazwa: "Decision Tree (drzewo decyzyjne)",
-    opis: "Zadaje ciąg pytań tak/nie o wskaźniki firmy i schodzi gałęziami aż do końcowej decyzji: zdrowa albo bankrut.",
+    opis: "Zadaje ciąg pytań tak/nie o wskaźniki firmy i schodzi gałęziami aż do końcowej decyzji.",
+    kroki: [
+      "Wybiera pytanie najlepiej dzielące firmy (np. zadłużenie > 0,8)",
+      "Tworzy gałęzie tak/nie i powtarza pytania",
+      "W liściu zapada decyzja: zdrowa albo bankrut",
+    ],
+    wynik: "Łapie sporo bankrutów, ale często się myli (dużo fałszywych alarmów). Jego zaletą jest pełna czytelność.",
     Viz: VizTree,
   },
   {
+    tab: "Random Forest",
     nazwa: "Random Forest (las losowy)",
-    opis: "Buduje setki różnych drzew, każde głosuje, a wynikiem jest decyzja większości — pojedyncze błędy się znoszą.",
+    opis: "Zespół setek drzew. Każde uczy się na innym wycinku danych, a potem wszystkie głosują.",
+    kroki: [
+      "Buduje 300 różnych drzew na losowych wycinkach danych",
+      "Każde drzewo oddaje swój głos",
+      "Wynik to decyzja większości — pojedyncze błędy się znoszą",
+    ],
+    wynik: "Najlepszy balans u nas — najwyższe AUC i precyzja. Gdy mówi „bankrut”, zwykle ma rację.",
     Viz: VizForest,
   },
   {
+    tab: "Gradient Boosting",
     nazwa: "Gradient Boosting",
-    opis: "Buduje drzewa po kolei — każde kolejne naprawia błędy poprzedniego, więc model stopniowo coraz lepiej rozpoznaje trudne przypadki.",
+    opis: "Buduje drzewa po kolei — każde kolejne naprawia błędy poprzedniego.",
+    kroki: [
+      "Buduje pierwsze, proste drzewo",
+      "Sprawdza, gdzie się pomyliło",
+      "Dodaje kolejne drzewo skupione na błędach — i tak wiele razy",
+    ],
+    wynik: "Najwyższa czułość — wyłapuje najwięcej bankrutów. Dlatego w analizie kosztowej wychodzi najtańszy.",
     Viz: VizBoosting,
   },
 ];
@@ -45,6 +73,7 @@ export default function Strona() {
   const [model, setModel] = useState<ModelData | null>(null);
   const [kosztFN, setKosztFN] = useState("200000");
   const [kosztFP, setKosztFP] = useState("5000");
+  const [wybranyModel, setWybranyModel] = useState(0);
 
   useEffect(() => {
     fetch("/model.json")
@@ -360,20 +389,44 @@ export default function Strona() {
             <h2>Jak działają modele</h2>
           </div>
           <p className="sub">
-            Cztery modele klasyfikują firmę na różne sposoby. Poniżej uproszczone schematy pokazujące, jak
-            każdy z nich podejmuje decyzję.
+            Cztery modele klasyfikują firmę na różne sposoby. Kliknij model, aby zobaczyć jego schemat
+            w powiększeniu i prześledzić, jak podejmuje decyzję.
           </p>
-          <div className="vizgrid">
-            {JAK_DZIALAJA.map(({ nazwa, opis, Viz }) => (
-              <div className="vizcard" key={nazwa}>
-                <div className="vizimg">
-                  <Viz />
-                </div>
-                <h3>{nazwa}</h3>
-                <p>{opis}</p>
-              </div>
+
+          <div className="modeltabs">
+            {JAK_DZIALAJA.map((m, i) => (
+              <button
+                key={m.tab}
+                className={`modeltab ${i === wybranyModel ? "active" : ""}`}
+                onClick={() => setWybranyModel(i)}
+                aria-pressed={i === wybranyModel}
+              >
+                {m.tab}
+              </button>
             ))}
           </div>
+
+          {(() => {
+            const m = JAK_DZIALAJA[wybranyModel];
+            const Viz = m.Viz;
+            return (
+              <div className="modelstage card" key={wybranyModel}>
+                <div className="stageviz">
+                  <Viz />
+                </div>
+                <div className="stageinfo">
+                  <h3>{m.nazwa}</h3>
+                  <p className="stageopis">{m.opis}</p>
+                  <ol className="kroki">
+                    {m.kroki.map((k, j) => (
+                      <li key={j}>{k}</li>
+                    ))}
+                  </ol>
+                  <div className="resultnote">{m.wynik}</div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 

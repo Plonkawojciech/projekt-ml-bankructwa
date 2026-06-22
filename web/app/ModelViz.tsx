@@ -10,7 +10,7 @@ const MUT = "var(--muted)";
 const svgProps = {
   viewBox: "0 0 300 210",
   width: "100%",
-  style: { maxWidth: 320, height: "auto" as const },
+  style: { maxWidth: 440, height: "auto" as const },
 };
 
 // ---------------- KNN ----------------

@@ -536,44 +536,117 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 5px;
 }
 
-/* ---------- jak działają modele ---------- */
-.vizgrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+/* ---------- jak działają modele (interaktywne) ---------- */
+.modeltabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
 }
-@media (max-width: 640px) {
-  .vizgrid {
+.modeltab {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 9px 17px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.modeltab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.modeltab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+.modelstage {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 28px;
+  align-items: center;
+  animation: zoomIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (max-width: 760px) {
+  .modelstage {
     grid-template-columns: 1fr;
+    gap: 22px;
   }
 }
-.vizcard {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px;
-  box-shadow: var(--shadow-sm);
-  background: var(--bg);
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
-.vizimg {
+.stageviz {
   display: flex;
   justify-content: center;
   align-items: center;
   background: var(--bg-alt);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 16px;
+  border-radius: 12px;
+  padding: 22px;
 }
-.vizcard h3 {
-  font-size: 16px;
-  font-weight: 650;
-  margin: 0 0 6px;
+.stageinfo h3 {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0 0 8px;
   letter-spacing: -0.01em;
 }
-.vizcard p {
-  font-size: 13.5px;
+.stageopis {
+  font-size: 15px;
   color: var(--muted);
-  margin: 0;
+  margin: 0 0 18px;
   line-height: 1.55;
+}
+.kroki {
+  margin: 0 0 18px;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: krok;
+  display: grid;
+  gap: 10px;
+}
+.kroki li {
+  counter-increment: krok;
+  position: relative;
+  padding-left: 34px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.kroki li::before {
+  content: counter(krok);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.resultnote {
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--bg-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  line-height: 1.5;
 }
 
 /* ---------- conclusions ---------- */

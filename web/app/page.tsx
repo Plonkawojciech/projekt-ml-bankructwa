@@ -2,6 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { ModelData, prawdopodobienstwo } from "@/lib/predict";
+import { VizKNN, VizTree, VizForest, VizBoosting } from "./ModelViz";
+
+const JAK_DZIALAJA = [
+  {
+    nazwa: "K-Nearest Neighbors (KNN)",
+    opis: "Szuka najbardziej podobnych firm w danych i sprawdza, ile z nich zbankrutowało — większość sąsiadów decyduje o werdykcie.",
+    Viz: VizKNN,
+  },
+  {
+    nazwa: "Decision Tree (drzewo decyzyjne)",
+    opis: "Zadaje ciąg pytań tak/nie o wskaźniki firmy i schodzi gałęziami aż do końcowej decyzji: zdrowa albo bankrut.",
+    Viz: VizTree,
+  },
+  {
+    nazwa: "Random Forest (las losowy)",
+    opis: "Buduje setki różnych drzew, każde głosuje, a wynikiem jest decyzja większości — pojedyncze błędy się znoszą.",
+    Viz: VizForest,
+  },
+  {
+    nazwa: "Gradient Boosting",
+    opis: "Buduje drzewa po kolei — każde kolejne naprawia błędy poprzedniego, więc model stopniowo coraz lepiej rozpoznaje trudne przypadki.",
+    Viz: VizBoosting,
+  },
+];
 
 const fmtPct = (x: number) => (x * 100).toFixed(1) + "%";
 const fmtInt = (x: number) => x.toLocaleString("pl-PL");
@@ -325,6 +349,31 @@ export default function Strona() {
               się model o najwyższej czułości, a nie o najwyższej trafności.
             </li>
           </ul>
+        </div>
+      </section>
+
+      {/* 07 JAK DZIAŁAJĄ MODELE */}
+      <section>
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="sec-num">07</span>
+            <h2>Jak działają modele</h2>
+          </div>
+          <p className="sub">
+            Cztery modele klasyfikują firmę na różne sposoby. Poniżej uproszczone schematy pokazujące, jak
+            każdy z nich podejmuje decyzję.
+          </p>
+          <div className="vizgrid">
+            {JAK_DZIALAJA.map(({ nazwa, opis, Viz }) => (
+              <div className="vizcard" key={nazwa}>
+                <div className="vizimg">
+                  <Viz />
+                </div>
+                <h3>{nazwa}</h3>
+                <p>{opis}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
